@@ -44,6 +44,9 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
           Sign in
         </SubmitButton>
         <FormMessage message={searchParams} />
+        <Link href="/" className="mt-4 text-blue-500 underline">
+          &larr; Back to Home
+        </Link>
       </form>
     </div>
   );
