@@ -13,8 +13,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useSessionManager } from "@/contexts/SessionContext";
+import NewChatInterface from "./new-chat-interface";
 
 enum View {
+  NewChat = "new-chat",
   CurrentChat = "current-chat",
   Itinerary = "itinerary",
   Map = "map",
@@ -22,10 +25,13 @@ enum View {
 }
 
 function InterfaceWindow() {
-  const [currentView, setCurrentView] = useState<View>(View.CurrentChat);
+  const [currentView, setCurrentView] = useState<View>(View.NewChat);
+  const { createNewSession } = useSessionManager();
 
   const renderContent = () => {
     switch (currentView) {
+      case View.NewChat:
+        return <NewChatInterface />;
       case View.CurrentChat:
         return <ChatInterface />;
       case View.Itinerary:
@@ -57,6 +63,21 @@ function InterfaceWindow() {
         <ScrollArea className="h-[calc(100vh-64px)]">
           <div className="space-y-4 p-4">
             <nav className="space-y-2">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start",
+                  currentView === View.NewChat &&
+                    "bg-primary/10 hover:bg-primary/10"
+                )}
+                onClick={() => {
+                  createNewSession();
+                  setCurrentView(View.NewChat);
+                }}
+              >
+                <LayoutGrid className="mr-2 h-4 w-4" />
+                New Chat
+              </Button>
               <Button
                 variant="ghost"
                 className={cn(
