@@ -161,12 +161,12 @@ function ActionSearchBar({ actions = allActions }: { actions?: Action[] }) {
             className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block"
             htmlFor="search"
           >
-            Search Commands
+            Ready for your next trip?
           </label>
           <div className="relative">
             <Input
               type="text"
-              placeholder="What's up?"
+              placeholder="Where can I take you?"
               value={query}
               onChange={handleInputChange}
               onFocus={handleFocus}
