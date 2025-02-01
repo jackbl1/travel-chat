@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import {useSelector} from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api"
 import ErrorMessage from "./ErrorMessage"
 import MapsInfoMessage from "./MapsInfoMessage"
+import { setLocations } from "../redux/itinerarySlice"
 
 interface GeocodedLocation extends Location {
   lat: number
@@ -23,6 +24,7 @@ const center = {
 }
 
 export default function LocationMap({ apiKey }: { apiKey?: string }) {
+  const dispatch = useDispatch()
   const [isClient, setIsClient] = useState(false)
   const [geocodedLocations, setGeocodedLocations] = useState<GeocodedLocation[]>([])
   const [isGeocoding, setIsGeocoding] = useState(false)
@@ -55,42 +57,57 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
     setMap(null)
   }, [])
 
+  // New separate useEffect for bounds
+  useEffect(() => {
+    if (map && geocodedLocations.length > 0) {
+      const bounds = new window.google.maps.LatLngBounds();
+      geocodedLocations.forEach((location) => {
+        bounds.extend({ lat: location.lat, lng: location.lng });
+      });
+      map.fitBounds(bounds);
+    }
+  }, [map, geocodedLocations]);
+
   useEffect(() => {
     if (isLoaded && apiKey) {
-      console.log(locations);
-      setIsGeocoding(true)
-      const geocoder = new window.google.maps.Geocoder()
+      // Skip geocoding if all locations already have coordinates
+      if (locations.every(loc => 'lat' in loc && 'lng' in loc)) {
+        setGeocodedLocations(locations as GeocodedLocation[]);
+        return;
+      }
+
+      setIsGeocoding(true);
+      const geocoder = new window.google.maps.Geocoder();
       const promises = locations.map(
         (location) =>
           new Promise<GeocodedLocation>((resolve, reject) => {
+            // If location already has coordinates, use them
+            if ('lat' in location && 'lng' in location) {
+              resolve(location as GeocodedLocation);
+              return;
+            }
+
             geocoder.geocode({ address: location.name }, (results, status) => {
               if (status === "OK" && results[0]) {
-                const { lat, lng } = results[0].geometry.location.toJSON()
-                resolve({ ...location, lat, lng })
+                const { lat, lng } = results[0].geometry.location.toJSON();
+                resolve({ ...location, lat, lng });
               } else {
-                reject(`Geocode was not successful for the following reason: ${status}`)
+                reject(`Geocode was not successful for the following reason: ${status}`);
               }
-            })
-          }),
-      )
+            });
+          })
+      );
 
       Promise.all(promises)
         .then((results) => {
-          setGeocodedLocations(results)
-          if (map) {
-            const bounds = new window.google.maps.LatLngBounds()
-            results.forEach((location) => bounds.extend({ lat: location.lat, lng: location.lng }))
-            map.fitBounds(bounds)
-          }
+          setGeocodedLocations(results);
+          // Store the geocoded results in Redux
+          dispatch(setLocations(results));
         })
         .catch((error) => console.error(error))
-        .finally(() => setIsGeocoding(false))
+        .finally(() => setIsGeocoding(false));
     }
-  }, [isLoaded, apiKey, locations, map])
-
-  // if (locations.length === 0) {
-  //   return <MapsInfoMessage message="Please add a location to your itinerary" />
-  // }
+  }, [isLoaded, apiKey, locations, dispatch]);
 
   if (!isClient) {
     return <ErrorMessage message="!isClient" />

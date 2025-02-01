@@ -3,6 +3,12 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 type LocationType = {
   name: string;
   placeholder: string;
+  geolocation: LatLongType;
+};
+
+type LatLongType = {
+  lat: number;
+  long: number;
 };
 
 interface ItineraryState {
@@ -10,7 +16,11 @@ interface ItineraryState {
 }
 
 const initialState: ItineraryState = {
-  locations: [],
+  locations: [
+    // {name: 'Noregon Systems Greensboro', placeholder: 'bottom text', lat: 36.07996, lng: -79.9631899},
+    // {name: 'Meadowlark Elementary School Winston Salem', placeholder: 'Spawn', lat: 36.1002502, lng: -80.3644626},
+    // {name: "Mozelle's, Winston Salem", placeholder: 'Foo Bar', lat: 36.0969189, lng: -80.25673239999999}
+  ],
 };
 
 const itinerarySlice = createSlice({
