@@ -2,8 +2,8 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 type LocationType = {
   name: string;
-  placeholder: string;
-  geolocation: LatLongType;
+  placeholder?: string;
+  geolocation?: LatLongType;
 };
 
 type LatLongType = {

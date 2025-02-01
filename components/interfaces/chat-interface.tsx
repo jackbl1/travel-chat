@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
+import { useDispatch } from "react-redux";
+import { addLocation } from "@/redux/itinerarySlice";
 
 interface Message {
   role: "agent" | "user";
@@ -26,6 +28,7 @@ export default function ChatInterface() {
     },
   ]);
   const { supabase, user } = useSupabase();
+  const dispatch = useDispatch();
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -100,6 +103,15 @@ export default function ChatInterface() {
           timestamp: new Date().toLocaleTimeString(),
         };
         setMessages((prevMessages) => [...prevMessages, agentMessage]);
+        // Add the list of locations to the redux state
+        for (const location of data.locations) {
+          dispatch(
+            addLocation({
+              name: location,
+            })
+          );
+        }
+
         if (supabase && user) {
           // TODO: remove user lookup here if the new user context works
           // const {
