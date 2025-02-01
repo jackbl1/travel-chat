@@ -109,7 +109,7 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
           const failures = results
             .filter(result => !result.success)
             .map(result => result.name!)
-          
+          console.log(failures);
           setFailedLocations(failures);
           setGeocodedLocations(successfulResults.map(r => r.location));
           // Store the geocoded results in Redux
