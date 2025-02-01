@@ -11,7 +11,7 @@ export default function Page() {
   //     case "itinerary":
   //       return <div>Itinerary Content</div>;
   //     case "map":
-  //       return <div>Map Content</div>;
+  //       return <MapInterface />;
   //     case "past-trips":
   //       return <div>Past Trips Content</div>;
   //     default:
