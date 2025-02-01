@@ -2,6 +2,7 @@
 
 import PageLayout from "./page-layout";
 import ChatInterface from "./chat-interface";
+import MapInterface from "./map-interface";
 import { useState } from "react";
 
 export default function Page() {
@@ -14,7 +15,7 @@ export default function Page() {
       case "itinerary":
         return <div>Itinerary Content</div>;
       case "map":
-        return <div>Map Content</div>;
+        return <MapInterface />;
       case "past-trips":
         return <div>Past Trips Content</div>;
       default:
