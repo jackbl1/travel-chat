@@ -3,7 +3,8 @@
 import React, { createContext, useState, useContext, ReactNode } from "react";
 
 interface SessionContextProps {
-  sessionId: string | null;
+  activeSessionId: string | null;
+  setActiveSessionId: (sessionId: string) => void;
   createNewSession: () => void;
 }
 
@@ -14,15 +15,17 @@ const SessionContext = createContext<SessionContextProps | undefined>(
 export const SessionProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
   const createNewSession = () => {
     const newSessionId = `session-${Date.now()}`;
-    setSessionId(newSessionId);
+    setActiveSessionId(newSessionId);
   };
 
   return (
-    <SessionContext.Provider value={{ sessionId, createNewSession }}>
+    <SessionContext.Provider
+      value={{ activeSessionId, setActiveSessionId, createNewSession }}
+    >
       {children}
     </SessionContext.Provider>
   );

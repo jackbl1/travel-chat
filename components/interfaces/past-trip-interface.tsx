@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSupabase } from "@/contexts/SupabaseContext";
+import { useSessionManager } from "@/contexts/SessionContext";
 
 interface Session {
   id: string;
@@ -7,9 +8,11 @@ interface Session {
 }
 
 function PastTripInterface() {
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessions, setSessions] = useState<Session[]>([]);
+
   const { supabase, user } = useSupabase();
+  const { activeSessionId, setActiveSessionId } = useSessionManager();
 
   useEffect(() => {
     const fetchSessions = async () => {
