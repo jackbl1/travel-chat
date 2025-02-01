@@ -40,7 +40,7 @@ function InterfaceWindow() {
 
   return (
     <div className="flex bg-background">
-      <div className="w-64 border-r bg-muted/10">
+      <div className="min-w-64 max-w-64 border-r bg-muted/10">
         <div className="p-4 border-b">
           <div className="flex items-center gap-2">
             <Image
