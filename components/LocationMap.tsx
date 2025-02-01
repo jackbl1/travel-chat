@@ -28,6 +28,7 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
   const [isClient, setIsClient] = useState(false)
   const [geocodedLocations, setGeocodedLocations] = useState<GeocodedLocation[]>([])
   const [isGeocoding, setIsGeocoding] = useState(false)
+  const [failedLocations, setFailedLocations] = useState<string[]>([]);
   const locations = useSelector((state: rootState) => state.itinerary.locations)
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
 
   useEffect(() => {
     if (isLoaded && apiKey) {
+      setFailedLocations([]); // Reset failed locations on new geocoding attempt
       // Skip geocoding if all locations already have coordinates
       if (locations.every(loc => 'lat' in loc && 'lng' in loc)) {
         setGeocodedLocations(locations as GeocodedLocation[]);
@@ -80,19 +82,19 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
       const geocoder = new window.google.maps.Geocoder();
       const promises = locations.map(
         (location) =>
-          new Promise<GeocodedLocation>((resolve, reject) => {
+          new Promise<{success: boolean, location?: GeocodedLocation, name?: string}>((resolve) => {
             // If location already has coordinates, use them
             if ('lat' in location && 'lng' in location) {
-              resolve(location as GeocodedLocation);
+              resolve({success: true, location: location as GeocodedLocation});
               return;
             }
 
             geocoder.geocode({ address: location.name }, (results, status) => {
               if (status === "OK" && results[0]) {
                 const { lat, lng } = results[0].geometry.location.toJSON();
-                resolve({ ...location, lat, lng });
+                resolve({success: true, location: { ...location, lat, lng }});
               } else {
-                reject(`Geocode was not successful for the following reason: ${status}`);
+                resolve({success: false, name: location.name});
               }
             });
           })
@@ -100,11 +102,19 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
 
       Promise.all(promises)
         .then((results) => {
-          setGeocodedLocations(results);
+          const successfulResults = results
+            .filter((result): result is {success: true, location: GeocodedLocation} => 
+              result.success && !!result.location);
+          
+          const failures = results
+            .filter(result => !result.success)
+            .map(result => result.name!)
+          
+          setFailedLocations(failures);
+          setGeocodedLocations(successfulResults.map(r => r.location));
           // Store the geocoded results in Redux
-          dispatch(setLocations(results));
+          dispatch(setLocations(successfulResults.map(r => r.location)));
         })
-        .catch((error) => console.error(error))
         .finally(() => setIsGeocoding(false));
     }
   }, [isLoaded, apiKey, locations, dispatch]);
@@ -126,15 +136,33 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
   }
 
   return (
-    <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={10} onLoad={onLoad} onUnmount={onUnmount}>
-      {geocodedLocations.map((location) => (
-        <Marker 
-          key={`${location.id}-${location.lat}-${location.lng}`} 
-          position={{ lat: location.lat, lng: location.lng }} 
-          title={location.name} 
-        />
-      ))}
-    </GoogleMap>
+    <div className="relative">
+      <GoogleMap mapContainerStyle={containerStyle} center={center} zoom={10} onLoad={onLoad} onUnmount={onUnmount}>
+        {geocodedLocations.map((location, index) => (
+          <Marker 
+            key={`${location.name}-${index}-${location.lat}-${location.lng}`} 
+            position={{ lat: location.lat, lng: location.lng }} 
+            title={location.name} 
+          />
+        ))}
+      </GoogleMap>
+      
+      {failedLocations.length > 0 && (
+        <div className="absolute bottom-2 right-2 group">
+          <div className="bg-amber-500 rounded-full w-6 h-6 flex items-center justify-center cursor-help">
+            <span className="text-white font-bold">!</span>
+          </div>
+          <div className="hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-2 bg-white shadow-lg rounded-lg text-sm">
+            <p className="font-semibold text-amber-600 mb-1">Failed to locate:</p>
+            <ul className="text-slate-600">
+              {failedLocations.map((name, index) => (
+                <li key={index}>{name}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
