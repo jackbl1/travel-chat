@@ -115,8 +115,8 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      <ScrollArea className="flex-1 p-4">
+    <div className="flex-1 flex flex-col h-screen">
+      <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {messages.map((message, index) => (
             <div
@@ -149,7 +149,7 @@ export default function ChatInterface() {
                     {message.content}
                   </p>
                 </div>
-                {message.role === "agent" && (
+                {/* {message.role === "agent" && (
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Copy className="h-4 w-4" />
@@ -164,7 +164,7 @@ export default function ChatInterface() {
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
+                )} */}
               </div>
             </div>
           ))}

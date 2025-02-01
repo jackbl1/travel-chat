@@ -11,14 +11,16 @@ import {
   BarChart2,
   X,
 } from "lucide-react";
+import HeaderAuth from "@/components/header-auth";
 
 export default function PageLayout({
   children,
-  setCurrentView,
 }: {
   children: React.ReactNode;
-  setCurrentView: (view: string) => void;
 }) {
+  const setCurrentView = (i: string) => {
+    console.log(i);
+  };
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
@@ -41,7 +43,7 @@ export default function PageLayout({
               <Button
                 variant="ghost"
                 className="w-full justify-start"
-                onClick={() => setCurrentView("current-chat")}
+                // onClick={() => setCurrentView("current-chat")}
               >
                 <LayoutGrid className="mr-2 h-4 w-4" />
                 Current Chat
@@ -49,7 +51,7 @@ export default function PageLayout({
               <Button
                 variant="ghost"
                 className="w-full justify-start"
-                onClick={() => setCurrentView("itinerary")}
+                // onClick={() => setCurrentView("itinerary")}
               >
                 <Functions className="mr-2 h-4 w-4" />
                 Itinerary
@@ -57,7 +59,7 @@ export default function PageLayout({
               <Button
                 variant="ghost"
                 className="w-full justify-start"
-                onClick={() => setCurrentView("map")}
+                // onClick={() => setCurrentView("map")}
               >
                 <Layers className="mr-2 h-4 w-4" />
                 Map
@@ -67,7 +69,7 @@ export default function PageLayout({
               <Button
                 variant="ghost"
                 className="w-full justify-start"
-                onClick={() => setCurrentView("past-trips")}
+                // onClick={() => setCurrentView("past-trips")}
               >
                 <BarChart2 className="mr-2 h-4 w-4" />
                 Past Trips
@@ -84,12 +86,13 @@ export default function PageLayout({
           <header className="h-14 border-b px-4 flex items-center justify-between">
             <h1 className="text-sm font-medium">insert name of trip here</h1>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm">
+              {/* <Button variant="ghost" size="sm">
                 Save conversation
               </Button>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                 <X className="h-4 w-4" />
-              </Button>
+              </Button> */}
+              <HeaderAuth />
             </div>
           </header>
           {children}
