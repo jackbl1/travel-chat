@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useSupabase } from "@/contexts/SupabaseContext";
 
 interface Message {
   role: "agent" | "user";
@@ -24,6 +25,7 @@ export default function ChatInterface() {
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
+  const { supabase, user } = useSupabase();
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -33,15 +35,29 @@ export default function ChatInterface() {
       return;
     }
 
+    const newMessage: Message = {
+      role: "user",
+      content: userInput,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+
     setLoading(true);
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      {
-        role: "user",
-        content: userInput,
-        timestamp: new Date().toLocaleTimeString(),
-      },
-    ]);
+    setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+    // Save the new message to the Supabase sessions database
+    if (supabase && user) {
+      // TODO: remove user lookup here if the new user context works
+      // const {
+      //   data: { user },
+      // } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("messages")
+        .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
+
+      if (error) {
+        console.error("Error saving message:", error);
+      }
+    }
 
     // Send user question and history to API
     // TODO: send history along with user input
@@ -78,14 +94,25 @@ export default function ChatInterface() {
         ]);
       } else {
         // Add response to conversation
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            role: "agent",
-            content: data.reply,
-            timestamp: new Date().toLocaleTimeString(),
-          },
-        ]);
+        const agentMessage: Message = {
+          role: "agent",
+          content: data.reply,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+        setMessages((prevMessages) => [...prevMessages, agentMessage]);
+        if (supabase && user) {
+          // TODO: remove user lookup here if the new user context works
+          // const {
+          //   data: { user },
+          // } = await supabase.auth.getUser();
+          const { error } = await supabase
+            .from("messages")
+            .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
+
+          if (error) {
+            console.error("Error saving message:", error);
+          }
+        }
       }
     } catch (error) {
       console.error("Error:", error);
