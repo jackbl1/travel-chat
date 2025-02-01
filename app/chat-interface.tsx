@@ -1,37 +1,38 @@
-'use client'
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Copy, Download, ThumbsUp, ThumbsDown } from 'lucide-react'
-import { cn } from "@/lib/utils"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Copy, Download, ThumbsUp, ThumbsDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface Message {
-  role: "agent" | "user"
-  content: string
-  timestamp: string
+  role: "agent" | "user";
+  content: string;
+  timestamp: string;
 }
 
 export default function ChatInterface() {
-  const [input, setInput] = useState("")
+  const [input, setInput] = useState("");
   const [messages] = useState<Message[]>([
     {
       role: "agent",
-      content: "Hello, I am a generative AI agent. How may I assist you today?",
-      timestamp: "4:08:28 PM"
+      content: "Hello, I am Travel Buddy, where can I take ya?",
+      timestamp: "4:08:28 PM",
     },
-    {
-      role: "user",
-      content: "Hi, I'd like to check my bill.",
-      timestamp: "4:08:37 PM"
-    },
-    {
-      role: "agent",
-      content: "Please hold for a second.\n\nOk, I can help you with that\n\nI'm pulling up your current bill information\n\nYour current bill is $150, and it is due on August 31, 2024.\n\nIf you need more details, feel free to ask!",
-      timestamp: "4:08:37 PM"
-    }
-  ])
+    // {
+    //   role: "user",
+    //   content: "Hi, I'd like to check my bill.",
+    //   timestamp: "4:08:37 PM"
+    // },
+    // {
+    //   role: "agent",
+    //   content: "Please hold for a second.\n\nOk, I can help you with that\n\nI'm pulling up your current bill information\n\nYour current bill is $150, and it is due on August 31, 2024.\n\nIf you need more details, feel free to ask!",
+    //   timestamp: "4:08:37 PM"
+    // }
+  ]);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -46,7 +47,13 @@ export default function ChatInterface() {
               )}
             >
               {message.role === "agent" && (
-                <div className="h-8 w-8 rounded-full bg-primary flex-shrink-0" />
+                <Image
+                  src="/icon.webp"
+                  alt="Icon"
+                  className="h-6 w-6 rounded-full"
+                  width={32}
+                  height={32}
+                />
               )}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -58,7 +65,9 @@ export default function ChatInterface() {
                   </span>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  <p className="text-sm whitespace-pre-wrap">
+                    {message.content}
+                  </p>
                 </div>
                 {message.role === "agent" && (
                   <div className="flex items-center gap-2">
@@ -93,6 +102,5 @@ export default function ChatInterface() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
