@@ -19,7 +19,8 @@ interface LocationMapProps {
 
 const containerStyle = {
   width: "100%",
-  height: "400px",
+  height: "100%", // Changed from 400px to 100%
+  minHeight: "400px", // Added minHeight to ensure it doesn't get too small
 }
 
 const center = {

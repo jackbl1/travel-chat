@@ -10,10 +10,12 @@ const locations = [
 
 export default function MapPage() {
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Location Map</h1>
-      <div className="rounded-lg overflow-hidden shadow-lg">
-        <LocationMap locations={locations} apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} />
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.16))]">
+      <div className="container mx-auto p-4 flex flex-col flex-1">
+        <h1 className="text-2xl font-bold mb-4">Location Map</h1>
+        <div className="flex-1 rounded-lg overflow-hidden shadow-lg min-h-0">
+          <LocationMap locations={locations} apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY} />
+        </div>
       </div>
     </div>
   )
