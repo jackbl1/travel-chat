@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Copy, Download, ThumbsUp, ThumbsDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
@@ -45,6 +44,7 @@ export default function ChatInterface() {
     ]);
 
     // Send user question and history to API
+    // TODO: send history along with user input
     // const response = await fetch("/api/chat", {
     //   method: "POST",
     //   headers: {
@@ -115,8 +115,8 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      <ScrollArea className="flex-1 p-4">
+    <div className="flex-1 flex flex-col h-screen">
+      <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
           {messages.map((message, index) => (
             <div
@@ -149,7 +149,9 @@ export default function ChatInterface() {
                     {message.content}
                   </p>
                 </div>
-                {message.role === "agent" && (
+                {
+                  //TODO: Decide whether to show these buttons
+                  /* {message.role === "agent" && (
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Copy className="h-4 w-4" />
@@ -164,7 +166,8 @@ export default function ChatInterface() {
                       <ThumbsDown className="h-4 w-4" />
                     </Button>
                   </div>
-                )}
+                )} */
+                }
               </div>
             </div>
           ))}
