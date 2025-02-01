@@ -9,14 +9,11 @@ interface Session {
 function PastTripInterface() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const { supabase } = useSupabase();
+  const { supabase, user } = useSupabase();
 
   useEffect(() => {
     const fetchSessions = async () => {
       if (!supabase) return;
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
       if (user) {
         const { data, error } = await supabase
           .from("sessions")
@@ -31,8 +28,8 @@ function PastTripInterface() {
       }
       setLoading(false);
     };
-    if (supabase) fetchSessions();
-  }, [supabase]);
+    if (supabase && user) fetchSessions();
+  }, [supabase, user]);
 
   if (loading) {
     return <div>Loading...</div>;
