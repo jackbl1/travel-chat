@@ -12,27 +12,107 @@ interface Message {
   role: "agent" | "user";
   content: string;
   timestamp: string;
+  error?: string;
 }
 
 export default function ChatInterface() {
-  const [input, setInput] = useState("");
-  const [messages] = useState<Message[]>([
+  const [loading, setLoading] = useState(false);
+  const [userInput, setUserInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
     {
       role: "agent",
       content: "Hello, I am Travel Buddy, where can I take ya?",
-      timestamp: "4:08:28 PM",
+      timestamp: new Date().toLocaleTimeString(),
     },
-    // {
-    //   role: "user",
-    //   content: "Hi, I'd like to check my bill.",
-    //   timestamp: "4:08:37 PM"
-    // },
-    // {
-    //   role: "agent",
-    //   content: "Please hold for a second.\n\nOk, I can help you with that\n\nI'm pulling up your current bill information\n\nYour current bill is $150, and it is due on August 31, 2024.\n\nIf you need more details, feel free to ask!",
-    //   timestamp: "4:08:37 PM"
-    // }
   ]);
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (userInput.trim() === "") {
+      return;
+    }
+
+    setLoading(true);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      {
+        role: "user",
+        content: userInput,
+        timestamp: new Date().toLocaleTimeString(),
+      },
+    ]);
+
+    // Send user question and history to API
+    // const response = await fetch("/api/chat", {
+    //   method: "POST",
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //   },
+    //   body: JSON.stringify({ question: userInput, history: history }),
+    // });
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userInput }),
+      });
+
+      setUserInput("");
+      const data = await res.json();
+
+      if (data.error) {
+        console.error("Error:", data.error);
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            role: "agent",
+            content: "An error occurred while processing your request.",
+            timestamp: new Date().toLocaleTimeString(),
+            error: data.error,
+          },
+        ]);
+      } else {
+        // Add response to conversation
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            role: "agent",
+            content: data.reply,
+            timestamp: new Date().toLocaleTimeString(),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          role: "agent",
+          content: "An error occurred while processing your request.",
+          timestamp: new Date().toLocaleTimeString(),
+          error: "Unknown error",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Prevent blank submissions and allow for multiline input
+  const handleEnter = (e) => {
+    if (e.key === "Enter" && userInput) {
+      if (!e.shiftKey && userInput) {
+        handleSubmit(e);
+      }
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col">
@@ -43,7 +123,7 @@ export default function ChatInterface() {
               key={index}
               className={cn(
                 "flex gap-2 max-w-[80%]",
-                message.role === "user" && "ml-auto"
+                message.role === "user" && "ml-auto justify-end"
               )}
             >
               {message.role === "agent" && (
@@ -58,7 +138,7 @@ export default function ChatInterface() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">
-                    {message.role === "agent" ? "GenerativeAgent" : "G5"}
+                    {message.role === "agent" ? "Trip-Gen-Bot-ZX3000" : "User"}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {message.timestamp}
@@ -88,17 +168,47 @@ export default function ChatInterface() {
               </div>
             </div>
           ))}
+          {loading && (
+            <div className="flex gap-2 max-w-[80%]">
+              <Image
+                src="/icon.webp"
+                alt="Icon"
+                className="h-6 w-6 rounded-full"
+                width={32}
+                height={32}
+              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    Trip-Gen-Bot-ZX3000
+                  </span>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">Generating...</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </ScrollArea>
       <div className="p-4 border-t">
         <div className="flex gap-2">
           <Textarea
             placeholder="Type a message as a customer"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={userInput}
+            onKeyDown={handleEnter}
+            onChange={(e) => setUserInput(e.target.value)}
             className="min-h-[44px] max-h-32"
           />
-          <Button className="px-8">Send</Button>
+          {loading ? (
+            <Button className="px-8" disabled>
+              Chatting...
+            </Button>
+          ) : (
+            <Button className="px-8" onClick={handleSubmit}>
+              Send
+            </Button>
+          )}
         </div>
       </div>
     </div>
