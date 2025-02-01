@@ -20,7 +20,7 @@ export default function ChatInterface() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "agent",
-      content: "Hello, I am Travel Buddy, where can I take ya?",
+      content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);

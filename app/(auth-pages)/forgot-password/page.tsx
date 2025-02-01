@@ -33,7 +33,7 @@ export default async function ForgotPassword(props: {
           Send Reset Link
         </SubmitButton>
         <FormMessage message={searchParams} />
-        <Link href="/" className="mb-4 text-blue-500 underline">
+        <Link href="/" className="mt-4 text-blue-500 underline">
           &larr; Back to Home
         </Link>
       </form>

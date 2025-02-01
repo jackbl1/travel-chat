@@ -12,6 +12,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 enum View {
   CurrentChat = "current-chat",
@@ -58,7 +59,11 @@ function InterfaceWindow() {
             <nav className="space-y-2">
               <Button
                 variant="ghost"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  currentView === View.CurrentChat &&
+                    "bg-primary/10 hover:bg-primary/10"
+                )}
                 onClick={() => setCurrentView(View.CurrentChat)}
               >
                 <LayoutGrid className="mr-2 h-4 w-4" />
@@ -66,7 +71,11 @@ function InterfaceWindow() {
               </Button>
               <Button
                 variant="ghost"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  currentView === View.Itinerary &&
+                    "bg-primary/10 hover:bg-primary/10"
+                )}
                 onClick={() => setCurrentView(View.Itinerary)}
               >
                 <Functions className="mr-2 h-4 w-4" />
@@ -74,7 +83,11 @@ function InterfaceWindow() {
               </Button>
               <Button
                 variant="ghost"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  currentView === View.Map &&
+                    "bg-primary/10 hover:bg-primary/10"
+                )}
                 onClick={() => setCurrentView(View.Map)}
               >
                 <Layers className="mr-2 h-4 w-4" />
@@ -84,7 +97,11 @@ function InterfaceWindow() {
             <div className="pt-4 border-t">
               <Button
                 variant="ghost"
-                className="w-full justify-start"
+                className={cn(
+                  "w-full justify-start",
+                  currentView === View.PastTrips &&
+                    "bg-primary/10 hover:bg-primary/10"
+                )}
                 onClick={() => setCurrentView(View.PastTrips)}
               >
                 <BarChart2 className="mr-2 h-4 w-4" />
