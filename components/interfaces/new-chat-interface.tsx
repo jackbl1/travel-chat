@@ -70,11 +70,10 @@ const allActions = [
   },
 ];
 
-function ActionSearchBar({ actions = allActions }: { actions?: Action[] }) {
+function ActionSearchBar() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [isFocused, setIsFocused] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
@@ -100,7 +99,6 @@ function ActionSearchBar({ actions = allActions }: { actions?: Action[] }) {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
-    setIsTyping(true);
   };
 
   const container = {

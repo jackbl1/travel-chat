@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useSessionManager } from "@/contexts/SessionContext";
 import NewChatInterface from "./new-chat-interface";
 
 enum View {
@@ -26,7 +25,6 @@ enum View {
 
 function InterfaceWindow() {
   const [currentView, setCurrentView] = useState<View>(View.NewChat);
-  const { createNewSession } = useSessionManager();
 
   const renderContent = () => {
     switch (currentView) {
@@ -71,7 +69,6 @@ function InterfaceWindow() {
                     "bg-primary/10 hover:bg-primary/10"
                 )}
                 onClick={() => {
-                  createNewSession();
                   setCurrentView(View.NewChat);
                 }}
               >

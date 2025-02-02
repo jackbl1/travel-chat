@@ -12,10 +12,12 @@ type LatLongType = {
 };
 
 interface ItineraryState {
+  selectedSession: string | null;
   locations: LocationType[];
 }
 
 const initialState: ItineraryState = {
+  selectedSession: null,
   locations: [
     // {name: 'Noregon Systems Greensboro', placeholder: 'bottom text', lat: 36.07996, lng: -79.9631899},
     // {name: 'Meadowlark Elementary School Winston Salem', placeholder: 'Spawn', lat: 36.1002502, lng: -80.3644626},
@@ -27,6 +29,9 @@ const itinerarySlice = createSlice({
   name: "itinerary",
   initialState,
   reducers: {
+    setSelectedSession(state, action: PayloadAction<string | null>) {
+      state.selectedSession = action.payload;
+    },
     setLocations(state, action: PayloadAction<LocationType[]>) {
       state.locations = action.payload;
     },
@@ -40,6 +45,10 @@ const itinerarySlice = createSlice({
     },
   },
 });
+
+export const getActiveSessionId = (state: { itinerary: ItineraryState }) => {
+  return state.itinerary.selectedSession;
+};
 
 export const { setLocations, addLocation, removeLocation } =
   itinerarySlice.actions;

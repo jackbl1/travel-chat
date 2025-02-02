@@ -7,8 +7,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { useDispatch } from "react-redux";
-import { addLocation } from "@/redux/itinerarySlice";
+import { useDispatch, useSelector } from "react-redux";
+import { addLocation, getActiveSessionId } from "@/redux/itinerarySlice";
+import { useCreateSession } from "@/hooks/use-sessions";
+import { useAddMessage } from "@/hooks/use-messages";
 
 interface Message {
   role: "agent" | "user";
@@ -20,6 +22,7 @@ interface Message {
 export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [userInput, setUserInput] = useState("");
+  // TODO: remove this local state and only reference the database
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "agent",
@@ -27,8 +30,52 @@ export default function ChatInterface() {
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
-  const { supabase, user } = useSupabase();
+  const { user } = useSupabase();
+  const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
+
+  const mutationAddSession = useCreateSession((oldData, newData) => [
+    ...oldData,
+    newData,
+  ]);
+  const mutationAddMessage = useAddMessage((oldData, newData) => [
+    ...oldData,
+    newData,
+  ]);
+
+  const onCreateSession = async (
+    name: string = "New Session",
+    userId: string
+  ) => {
+    try {
+      await mutationAddSession.mutateAsync({
+        name,
+        userId,
+      });
+    } catch (e) {
+      console.log("Error adding session:", e);
+    }
+  };
+
+  const onAddMessage = async (
+    sessionId: string,
+    userId: string,
+    sender: string,
+    content: string,
+    locations: string[]
+  ) => {
+    try {
+      await mutationAddMessage.mutateAsync({
+        sessionId,
+        content,
+        sender,
+        locations,
+        userId,
+      });
+    } catch (e) {
+      console.log("Error adding message:", e);
+    }
+  };
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -47,20 +94,21 @@ export default function ChatInterface() {
     setLoading(true);
     setMessages((prevMessages) => [...prevMessages, newMessage]);
 
-    // Save the new message to the Supabase sessions database
-    if (supabase && user) {
-      // TODO: remove user lookup here if the new user context works
-      // const {
-      //   data: { user },
-      // } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("messages")
-        .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
-
-      if (error) {
-        console.error("Error saving message:", error);
-      }
+    if (!activeSessionId) {
+      await onCreateSession(
+        `Session ${new Date().toLocaleDateString()}`,
+        user?.id ?? ""
+      );
     }
+
+    // Save the new message to the Supabase sessions database
+    await onAddMessage(
+      activeSessionId ?? "",
+      user?.id ?? "",
+      "user",
+      userInput,
+      []
+    );
 
     // Send user question and history to API
     // TODO: send history along with user input
@@ -111,20 +159,28 @@ export default function ChatInterface() {
             })
           );
         }
+        // Add agent message to the database
+        onAddMessage(
+          activeSessionId ?? "",
+          user?.id ?? "",
+          "agent",
+          data.reply,
+          data.locations
+        );
 
-        if (supabase && user) {
-          // TODO: remove user lookup here if the new user context works
-          // const {
-          //   data: { user },
-          // } = await supabase.auth.getUser();
-          const { error } = await supabase
-            .from("messages")
-            .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
+        // if (supabase && user) {
+        //   // TODO: remove user lookup here if the new user context works
+        //   // const {
+        //   //   data: { user },
+        //   // } = await supabase.auth.getUser();
+        //   const { error } = await supabase
+        //     .from("messages")
+        //     .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
 
-          if (error) {
-            console.error("Error saving message:", error);
-          }
-        }
+        //   if (error) {
+        //     console.error("Error saving message:", error);
+        //   }
+        // }
       }
     } catch (error) {
       console.error("Error:", error);

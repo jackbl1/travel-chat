@@ -1,40 +1,15 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { useSessionManager } from "@/contexts/SessionContext";
-
-interface Session {
-  id: string;
-  name: string;
-}
+import { useSelector } from "react-redux";
+import { getActiveSessionId } from "@/redux/itinerarySlice";
+import { useGetSessions } from "@/hooks/use-sessions";
 
 function PastTripInterface() {
-  const [loading, setLoading] = useState(true);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const activeSessionId = useSelector(getActiveSessionId);
+  const { user } = useSupabase();
+  const { data: sessions, isLoading } = useGetSessions(user?.id ?? "");
 
-  const { supabase, user } = useSupabase();
-  const { activeSessionId, setActiveSessionId } = useSessionManager();
-
-  useEffect(() => {
-    const fetchSessions = async () => {
-      if (!supabase) return;
-      if (user) {
-        const { data, error } = await supabase
-          .from("sessions")
-          .select("id, name")
-          .eq("user_id", user.id);
-
-        if (error) {
-          console.error("Error fetching sessions:", error);
-        } else {
-          setSessions(data);
-        }
-      }
-      setLoading(false);
-    };
-    if (supabase && user) fetchSessions();
-  }, [supabase, user]);
-
-  if (loading) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
@@ -42,8 +17,17 @@ function PastTripInterface() {
     <div>
       <h1>Past Trips</h1>
       <ul>
-        {sessions.map((session) => (
-          <li key={session.id}>{session.name}</li>
+        {sessions?.map((session) => (
+          <li
+            key={session.sessionId}
+            className={
+              session.sessionId == activeSessionId
+                ? "bg-slate-500"
+                : "bg-slate-400"
+            }
+          >
+            {session.name}
+          </li>
         ))}
       </ul>
     </div>
