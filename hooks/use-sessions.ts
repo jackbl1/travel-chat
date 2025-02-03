@@ -1,6 +1,6 @@
 import { useDelete, useFetch, usePost } from "../utils/react-query";
 import { apiRoutes } from "../lib/api-routes";
-import { CreateSessionInterface, SessionInterface } from "@/lib/types";
+import { SessionInterface } from "@/lib/types";
 
 export const useGetSessions = (userId: string) =>
   useFetch<SessionInterface[]>(apiRoutes.session, { userId });
@@ -8,10 +8,10 @@ export const useGetSessions = (userId: string) =>
 export const useCreateSession = (
   updater: (
     oldData: SessionInterface[],
-    newData: CreateSessionInterface
+    newData: SessionInterface
   ) => SessionInterface[]
 ) =>
-  usePost<SessionInterface[], CreateSessionInterface>(
+  usePost<SessionInterface[], SessionInterface>(
     apiRoutes.session,
     undefined,
     updater

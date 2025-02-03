@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { addLocation, getActiveSessionId } from "@/redux/itinerarySlice";
 import { useCreateSession } from "@/hooks/use-sessions";
 import { useAddMessage } from "@/hooks/use-messages";
+import { v4 as uuidv4 } from "uuid";
 
 interface Message {
   role: "agent" | "user";
@@ -34,11 +35,11 @@ export default function ChatInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  const mutationAddSession = useCreateSession((oldData, newData) => [
+  const mutationAddSession = useCreateSession((oldData = [], newData) => [
     ...oldData,
     newData,
   ]);
-  const mutationAddMessage = useAddMessage((oldData, newData) => [
+  const mutationAddMessage = useAddMessage((oldData = [], newData) => [
     ...oldData,
     newData,
   ]);
@@ -48,10 +49,13 @@ export default function ChatInterface() {
     userId: string
   ) => {
     try {
-      await mutationAddSession.mutateAsync({
+      console.log("mutation is about to happen");
+      const res = await mutationAddSession.mutateAsync({
+        sessionId: uuidv4(),
         name,
         userId,
       });
+      console.log("mutation has happened", res);
     } catch (e) {
       console.log("Error adding session:", e);
     }
@@ -66,6 +70,7 @@ export default function ChatInterface() {
   ) => {
     try {
       await mutationAddMessage.mutateAsync({
+        messageId: uuidv4(),
         sessionId,
         content,
         sender,
@@ -95,10 +100,12 @@ export default function ChatInterface() {
     setMessages((prevMessages) => [...prevMessages, newMessage]);
 
     if (!activeSessionId) {
-      await onCreateSession(
+      console.log("no active session yet, creating session");
+      const res = await onCreateSession(
         `Session ${new Date().toLocaleDateString()}`,
         user?.id ?? ""
       );
+      console.log("session created", res);
     }
 
     // Save the new message to the Supabase sessions database

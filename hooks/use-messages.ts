@@ -1,6 +1,6 @@
 import { useDelete, useFetch, usePost } from "../utils/react-query";
 import { apiRoutes } from "../lib/api-routes";
-import { AddMessageInterface, MessageInterface } from "@/lib/types";
+import { MessageInterface } from "@/lib/types";
 
 export const useGetMessages = (sessionId: string) =>
   useFetch<MessageInterface[]>(apiRoutes.messages, { sessionId });
@@ -8,10 +8,10 @@ export const useGetMessages = (sessionId: string) =>
 export const useAddMessage = (
   updater: (
     oldData: MessageInterface[],
-    newData: AddMessageInterface
+    newData: MessageInterface
   ) => MessageInterface[]
 ) =>
-  usePost<MessageInterface[], AddMessageInterface>(
+  usePost<MessageInterface[], MessageInterface>(
     apiRoutes.messages,
     undefined,
     updater

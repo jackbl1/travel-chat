@@ -1,23 +1,17 @@
-export type SessionInterface = CreateSessionInterface & {
+export type SessionInterface = {
   sessionId: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CreateSessionInterface = {
   name: string;
   userId: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
-export type MessageInterface = AddMessageInterface & {
+export type MessageInterface = {
   messageId: string;
-  createdAt: string;
-};
-
-export type AddMessageInterface = {
   content: string;
   sender: string;
   locations: string[];
   userId: string;
   sessionId: string;
+  createdAt?: string;
 };
