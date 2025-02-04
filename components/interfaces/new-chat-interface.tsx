@@ -12,7 +12,7 @@ import {
   PlaneTakeoff,
   AudioLines,
 } from "lucide-react";
-import useDebounce from "../../hooks/use-debounce";
+import useDebounce from "../../hooks/useDebounce";
 
 interface Action {
   id: string;

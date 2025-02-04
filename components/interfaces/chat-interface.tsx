@@ -9,40 +9,41 @@ import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useDispatch, useSelector } from "react-redux";
 import { addLocation, getActiveSessionId } from "@/redux/itinerarySlice";
-import { useCreateSession } from "@/hooks/use-sessions";
-import { useAddMessage } from "@/hooks/use-messages";
+import { useCreateSession } from "@/hooks/useSessions";
+import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { v4 as uuidv4 } from "uuid";
 
-interface Message {
-  role: "agent" | "user";
-  content: string;
-  timestamp: string;
-  error?: string;
-}
+const errorMessage = {
+  role: "agent",
+  content: "An error occurred while processing your request.",
+  timestamp: new Date().toLocaleTimeString(),
+};
+
+const defaultMessage = {
+  role: "agent",
+  content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
+  timestamp: new Date().toLocaleTimeString(),
+};
 
 export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
-  // TODO: remove this local state and only reference the database
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "agent",
-      content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
-      timestamp: new Date().toLocaleTimeString(),
-    },
-  ]);
+  // // TODO: remove this local state and only reference the database
+  // const [messages, setMessages] = useState<Message[]>([
+  //   {
+  //     role: "agent",
+  //     content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
+  //     timestamp: new Date().toLocaleTimeString(),
+  //   },
+  // ]);
   const { user } = useSupabase();
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  const mutationAddSession = useCreateSession((oldData = [], newData) => [
-    ...oldData,
-    newData,
-  ]);
-  const mutationAddMessage = useAddMessage((oldData = [], newData) => [
-    ...oldData,
-    newData,
-  ]);
+  const createSessionMutation = useCreateSession();
+  const addMessageMutation = useAddMessage();
+  const messages = useGetMessages(activeSessionId ?? "");
 
   const onCreateSession = async (
     name: string = "New Session",
@@ -50,7 +51,7 @@ export default function ChatInterface() {
   ) => {
     try {
       console.log("mutation is about to happen");
-      const res = await mutationAddSession.mutateAsync({
+      const res = await createSessionMutation.mutateAsync({
         sessionId: uuidv4(),
         name,
         userId,
@@ -69,7 +70,7 @@ export default function ChatInterface() {
     locations: string[]
   ) => {
     try {
-      await mutationAddMessage.mutateAsync({
+      await addMessageMutation.mutateAsync({
         messageId: uuidv4(),
         sessionId,
         content,
@@ -90,14 +91,7 @@ export default function ChatInterface() {
       return;
     }
 
-    const newMessage: Message = {
-      role: "user",
-      content: userInput,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-
     setLoading(true);
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
 
     if (!activeSessionId) {
       console.log("no active session yet, creating session");
@@ -141,23 +135,8 @@ export default function ChatInterface() {
 
       if (data.error) {
         console.error("Error:", data.error);
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            role: "agent",
-            content: "An error occurred while processing your request.",
-            timestamp: new Date().toLocaleTimeString(),
-            error: data.error,
-          },
-        ]);
+        setError(true);
       } else {
-        // Add response to conversation
-        const agentMessage: Message = {
-          role: "agent",
-          content: data.reply,
-          timestamp: new Date().toLocaleTimeString(),
-        };
-        setMessages((prevMessages) => [...prevMessages, agentMessage]);
         // Add the list of locations to the redux state
         for (const location of data.locations) {
           dispatch(
@@ -166,6 +145,7 @@ export default function ChatInterface() {
             })
           );
         }
+
         // Add agent message to the database
         onAddMessage(
           activeSessionId ?? "",
@@ -174,32 +154,10 @@ export default function ChatInterface() {
           data.reply,
           data.locations
         );
-
-        // if (supabase && user) {
-        //   // TODO: remove user lookup here if the new user context works
-        //   // const {
-        //   //   data: { user },
-        //   // } = await supabase.auth.getUser();
-        //   const { error } = await supabase
-        //     .from("messages")
-        //     .insert([{ user_id: user.id, session_id: 1, message: newMessage }]);
-
-        //   if (error) {
-        //     console.error("Error saving message:", error);
-        //   }
-        // }
       }
     } catch (error) {
       console.error("Error:", error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        {
-          role: "agent",
-          content: "An error occurred while processing your request.",
-          timestamp: new Date().toLocaleTimeString(),
-          error: "Unknown error",
-        },
-      ]);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -220,7 +178,7 @@ export default function ChatInterface() {
     <div className="flex-1 flex flex-col h-screen">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {messages.map((message, index) => (
+          {messages.data?.map((message, index) => (
             <div
               key={index}
               className={cn(
@@ -243,7 +201,7 @@ export default function ChatInterface() {
                     {message.role === "agent" ? "Trip-Gen-Bot-ZX3000" : "User"}
                   </span>
                   <span className="text-sm text-muted-foreground">
-                    {message.timestamp}
+                    {message.createdAt}
                   </span>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">

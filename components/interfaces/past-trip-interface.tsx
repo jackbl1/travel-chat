@@ -2,7 +2,7 @@ import React from "react";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useSelector } from "react-redux";
 import { getActiveSessionId } from "@/redux/itinerarySlice";
-import { useGetSessions } from "@/hooks/use-sessions";
+import { useGetSessions } from "@/hooks/useSessions";
 
 function PastTripInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
