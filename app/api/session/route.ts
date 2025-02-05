@@ -50,7 +50,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const { userId, name, description } = parsed.data;
+    console.log("checkpoint 1");
+
+    const { userId, name } = parsed.data;
+
+    console.log("checkpoint 2");
 
     const { data, error } = await supabase
       .from("sessions")
@@ -59,7 +63,6 @@ export async function POST(request: Request) {
           session_id: uuidv4(),
           user_id: userId,
           name,
-          description,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -67,9 +70,13 @@ export async function POST(request: Request) {
       .select()
       .single();
 
+    console.log("checkpoint 3");
+
     if (error) {
       throw error;
     }
+
+    console.log("checkpoint 4", data);
 
     return NextResponse.json(data);
   } catch (error) {

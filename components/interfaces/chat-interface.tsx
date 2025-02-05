@@ -11,32 +11,31 @@ import { useDispatch, useSelector } from "react-redux";
 import { addLocation, getActiveSessionId } from "@/redux/itinerarySlice";
 import { useCreateSession } from "@/hooks/useSessions";
 import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
-import { v4 as uuidv4 } from "uuid";
+import { MessageInterface } from "@/lib/types";
 
-const errorMessage = {
+const errorMessage: MessageInterface = {
+  messageId: "error",
+  sessionId: "session1",
+  userId: "user1",
   role: "agent",
   content: "An error occurred while processing your request.",
-  timestamp: new Date().toLocaleTimeString(),
+  createdAt: new Date().toLocaleTimeString(),
 };
 
-const defaultMessage = {
+const defaultMessage: MessageInterface = {
+  messageId: "error",
+  sessionId: "session1",
+  userId: "user1",
   role: "agent",
   content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
-  timestamp: new Date().toLocaleTimeString(),
+  createdAt: new Date().toLocaleTimeString(),
 };
 
 export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
-  // // TODO: remove this local state and only reference the database
-  // const [messages, setMessages] = useState<Message[]>([
-  //   {
-  //     role: "agent",
-  //     content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
-  //     timestamp: new Date().toLocaleTimeString(),
-  //   },
-  // ]);
+
   const { user } = useSupabase();
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
@@ -45,18 +44,24 @@ export default function ChatInterface() {
   const addMessageMutation = useAddMessage();
   const messages = useGetMessages(activeSessionId ?? "");
 
+  const displayMessages = messages.error
+    ? [
+        defaultMessage,
+        ...(Array.isArray(messages.data) ? messages.data : []),
+        errorMessage,
+      ]
+    : [defaultMessage, ...(Array.isArray(messages.data) ? messages.data : [])];
+
   const onCreateSession = async (
     name: string = "New Session",
     userId: string
   ) => {
     try {
-      console.log("mutation is about to happen");
       const res = await createSessionMutation.mutateAsync({
-        sessionId: uuidv4(),
         name,
         userId,
       });
-      console.log("mutation has happened", res);
+      console.log("session was created", res);
     } catch (e) {
       console.log("Error adding session:", e);
     }
@@ -65,16 +70,15 @@ export default function ChatInterface() {
   const onAddMessage = async (
     sessionId: string,
     userId: string,
-    sender: string,
+    role: string,
     content: string,
     locations: string[]
   ) => {
     try {
       await addMessageMutation.mutateAsync({
-        messageId: uuidv4(),
         sessionId,
         content,
-        sender,
+        role,
         locations,
         userId,
       });
@@ -94,12 +98,10 @@ export default function ChatInterface() {
     setLoading(true);
 
     if (!activeSessionId) {
-      console.log("no active session yet, creating session");
-      const res = await onCreateSession(
+      await onCreateSession(
         `Session ${new Date().toLocaleDateString()}`,
-        user?.id ?? ""
+        user?.id ?? "user1"
       );
-      console.log("session created", res);
     }
 
     // Save the new message to the Supabase sessions database
@@ -178,7 +180,7 @@ export default function ChatInterface() {
     <div className="flex-1 flex flex-col h-screen">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {messages.data?.map((message, index) => (
+          {displayMessages.map((message, index) => (
             <div
               key={index}
               className={cn(

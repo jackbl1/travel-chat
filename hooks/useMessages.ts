@@ -19,7 +19,9 @@ export const useAddMessage = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (message: MessageInterface) => {
+    mutationFn: async (
+      message: Omit<MessageInterface, "messageId" | "createdAt">
+    ) => {
       return axios.post(apiRoutes.messages, message);
     },
     onMutate: async (newMessage) => {
@@ -31,7 +33,14 @@ export const useAddMessage = () => {
 
       queryClient.setQueryData<Array<MessageInterface>>(
         ["messages", newMessage.sessionId],
-        (oldMessages) => [...(oldMessages || []), newMessage]
+        (oldMessages) => [
+          ...(oldMessages ?? []),
+          {
+            ...newMessage,
+            messageId: `temp-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+          },
+        ]
       );
 
       return { previousMessages };

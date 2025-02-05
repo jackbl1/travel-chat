@@ -10,7 +10,7 @@ export type MessageInterface = {
   messageId: string;
   content: string;
   role: string;
-  locations: string[];
+  locations?: string[];
   userId: string;
   sessionId: string;
   createdAt: string;
