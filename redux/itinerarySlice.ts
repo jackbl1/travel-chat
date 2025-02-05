@@ -29,7 +29,7 @@ const itinerarySlice = createSlice({
   name: "itinerary",
   initialState,
   reducers: {
-    setSelectedSession(state, action: PayloadAction<string | null>) {
+    setActiveSessionId(state, action: PayloadAction<string | null>) {
       state.selectedSession = action.payload;
     },
     setLocations(state, action: PayloadAction<LocationType[]>) {
@@ -50,6 +50,6 @@ export const getActiveSessionId = (state: { itinerary: ItineraryState }) => {
   return state.itinerary.selectedSession;
 };
 
-export const { setLocations, addLocation, removeLocation } =
+export const { setActiveSessionId, setLocations, addLocation, removeLocation } =
   itinerarySlice.actions;
 export default itinerarySlice.reducer;

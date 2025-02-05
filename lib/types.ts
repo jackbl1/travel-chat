@@ -4,13 +4,13 @@ export type SessionInterface = {
   userId: string;
   createdAt: string;
   updatedAt: string;
+  locations?: string[];
 };
 
 export type MessageInterface = {
   messageId: string;
   content: string;
   role: string;
-  locations?: string[];
   userId: string;
   sessionId: string;
   createdAt: string;

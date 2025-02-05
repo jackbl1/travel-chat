@@ -8,10 +8,15 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useDispatch, useSelector } from "react-redux";
-import { addLocation, getActiveSessionId } from "@/redux/itinerarySlice";
-import { useCreateSession } from "@/hooks/useSessions";
-import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
+import {
+  addLocation,
+  getActiveSessionId,
+  setActiveSessionId,
+} from "@/redux/itinerarySlice";
+import { useGetSessions } from "@/hooks/useSessions";
+import { useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
+import { useAddMessage, useAddSession } from "@/hooks/usePostOperation";
 
 const errorMessage: MessageInterface = {
   messageId: "error",
@@ -40,11 +45,16 @@ export default function ChatInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  const createSessionMutation = useCreateSession();
-  const addMessageMutation = useAddMessage();
+  const {
+    addMessage,
+    isLoading: isAddMessageLoading,
+    error: isAddMessageError,
+  } = useAddMessage();
   const messages = useGetMessages(activeSessionId ?? "");
+  const { addSession } = useAddSession();
+  //const userSessions = useGetSessions(user?.id ?? "");
 
-  const displayMessages = messages.error
+  const displayMessages = error
     ? [
         defaultMessage,
         ...(Array.isArray(messages.data) ? messages.data : []),
@@ -52,15 +62,14 @@ export default function ChatInterface() {
       ]
     : [defaultMessage, ...(Array.isArray(messages.data) ? messages.data : [])];
 
-  const onCreateSession = async (
-    name: string = "New Session",
-    userId: string
-  ) => {
+  const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
-      const res = await createSessionMutation.mutateAsync({
-        name,
-        userId,
-      });
+      // const res = await createSessionMutation.mutateAsync({
+      //   name,
+      //   userId,
+      // });
+      const res = await addSession({ name, userId });
+      dispatch(setActiveSessionId(res.sessionId));
       console.log("session was created", res);
     } catch (e) {
       console.log("Error adding session:", e);
@@ -75,20 +84,20 @@ export default function ChatInterface() {
     locations: string[]
   ) => {
     try {
-      await addMessageMutation.mutateAsync({
+      await addMessage({
         sessionId,
         content,
         role,
-        locations,
         userId,
       });
+      //TODO: Add locations to the session if new locations are generated here
     } catch (e) {
       console.log("Error adding message:", e);
     }
   };
 
   // Handle form submission
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (userInput.trim() === "") {
@@ -98,7 +107,7 @@ export default function ChatInterface() {
     setLoading(true);
 
     if (!activeSessionId) {
-      await onCreateSession(
+      await onAddSession(
         `Session ${new Date().toLocaleDateString()}`,
         user?.id ?? "user1"
       );

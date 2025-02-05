@@ -13,97 +13,98 @@ export const useGetSessions = (userId: string) => {
   });
 };
 
-export const useCreateSession = () => {
-  const queryClient = useQueryClient();
+// TODO: Use this react query hook when the endpoint starts working
+// export const useCreateSession = () => {
+//   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (
-      newSession: Omit<
-        SessionInterface,
-        "sessionId" | "createdAt" | "updatedAt"
-      >
-    ) => {
-      return axios.post(apiRoutes.session, newSession);
-    },
-    onMutate: async (newSession) => {
-      await queryClient.cancelQueries(["sessions", newSession.userId]);
+//   return useMutation({
+//     mutationFn: async (
+//       newSession: Omit<
+//         SessionInterface,
+//         "sessionId" | "createdAt" | "updatedAt"
+//       >
+//     ) => {
+//       return axios.post(apiRoutes.session, newSession);
+//     },
+//     onMutate: async (newSession) => {
+//       await queryClient.cancelQueries(["sessions", newSession.userId]);
 
-      const previousSessions = queryClient.getQueryData<
-        Array<SessionInterface>
-      >(["sessions", newSession.userId]);
+//       const previousSessions = queryClient.getQueryData<
+//         Array<SessionInterface>
+//       >(["sessions", newSession.userId]);
 
-      // Create a temporary ID for optimistic update
-      const tempSession = {
-        ...newSession,
-        id: `temp-${Date.now()}`,
-      };
+//       // Create a temporary ID for optimistic update
+//       const tempSession = {
+//         ...newSession,
+//         id: `temp-${Date.now()}`,
+//       };
 
-      queryClient.setQueryData<Array<SessionInterface>>(
-        ["sessions", newSession.userId],
-        (oldSessions) => [...(oldSessions || []), tempSession]
-      );
+//       queryClient.setQueryData<Array<SessionInterface>>(
+//         ["sessions", newSession.userId],
+//         (oldSessions) => [...(oldSessions || []), tempSession]
+//       );
 
-      return { previousSessions };
-    },
-    onError: (error, newSession, context) => {
-      if (context?.previousSessions) {
-        queryClient.setQueryData<Array<SessionInterface>>(
-          ["sessions", newSession.userId],
-          context.previousSessions
-        );
-      }
-    },
-    onSettled: (data, _, newSession) => {
-      if (data?.data) {
-        queryClient.invalidateQueries(["sessions", newSession.userId]);
-      }
-    },
-  });
-};
+//       return { previousSessions };
+//     },
+//     onError: (error, newSession, context) => {
+//       if (context?.previousSessions) {
+//         queryClient.setQueryData<Array<SessionInterface>>(
+//           ["sessions", newSession.userId],
+//           context.previousSessions
+//         );
+//       }
+//     },
+//     onSettled: (data, _, newSession) => {
+//       if (data?.data) {
+//         queryClient.invalidateQueries(["sessions", newSession.userId]);
+//       }
+//     },
+//   });
+// };
 
-export const useDeleteSession = () => {
-  const queryClient = useQueryClient();
+// export const useDeleteSession = () => {
+//   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({
-      sessionId,
-      userId,
-    }: {
-      sessionId: string;
-      userId: string;
-    }) => {
-      return axios.delete(`${apiRoutes.session}/${sessionId}`);
-    },
-    onMutate: async ({ sessionId, userId }) => {
-      await queryClient.cancelQueries(["sessions", userId]);
+//   return useMutation({
+//     mutationFn: async ({
+//       sessionId,
+//       userId,
+//     }: {
+//       sessionId: string;
+//       userId: string;
+//     }) => {
+//       return axios.delete(`${apiRoutes.session}/${sessionId}`);
+//     },
+//     onMutate: async ({ sessionId, userId }) => {
+//       await queryClient.cancelQueries(["sessions", userId]);
 
-      const previousSessions = queryClient.getQueryData<
-        Array<SessionInterface>
-      >(["sessions", userId]);
+//       const previousSessions = queryClient.getQueryData<
+//         Array<SessionInterface>
+//       >(["sessions", userId]);
 
-      queryClient.setQueryData<Array<SessionInterface>>(
-        ["sessions", userId],
-        (oldSessions) =>
-          oldSessions?.filter((session) => session.sessionId !== sessionId) ||
-          []
-      );
+//       queryClient.setQueryData<Array<SessionInterface>>(
+//         ["sessions", userId],
+//         (oldSessions) =>
+//           oldSessions?.filter((session) => session.sessionId !== sessionId) ||
+//           []
+//       );
 
-      // Also cancel and remove any related message queries
-      await queryClient.cancelQueries(["messages", sessionId]);
-      queryClient.removeQueries(["messages", sessionId]);
+//       // Also cancel and remove any related message queries
+//       await queryClient.cancelQueries(["messages", sessionId]);
+//       queryClient.removeQueries(["messages", sessionId]);
 
-      return { previousSessions };
-    },
-    onError: (error, { userId }, context) => {
-      if (context?.previousSessions) {
-        queryClient.setQueryData<Array<SessionInterface>>(
-          ["sessions", userId],
-          context.previousSessions
-        );
-      }
-    },
-    onSettled: (_, __, { userId }) => {
-      queryClient.invalidateQueries(["sessions", userId]);
-    },
-  });
-};
+//       return { previousSessions };
+//     },
+//     onError: (error, { userId }, context) => {
+//       if (context?.previousSessions) {
+//         queryClient.setQueryData<Array<SessionInterface>>(
+//           ["sessions", userId],
+//           context.previousSessions
+//         );
+//       }
+//     },
+//     onSettled: (_, __, { userId }) => {
+//       queryClient.invalidateQueries(["sessions", userId]);
+//     },
+//   });
+// };
