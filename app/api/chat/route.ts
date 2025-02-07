@@ -10,8 +10,9 @@ function parseAgentResponse(responseText: string) {
   const locationListStart = responseText.lastIndexOf("[");
   const locationListEnd = responseText.lastIndexOf("]");
 
+  // No locations in the response, just return the text
   if (locationListStart === -1 || locationListEnd === -1) {
-    throw new Error("Invalid response format: Missing location list");
+    return { itinerary: responseText, locations: [] };
   }
 
   // Extract the itinerary text and the list of locations

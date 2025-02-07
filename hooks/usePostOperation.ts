@@ -9,7 +9,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_KEY!
 );
 
-export const useAddMessage = () => {
+export const useMessageOperations = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -45,14 +45,26 @@ export const useAddMessage = () => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    const { error: supabaseError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("message_id", messageId);
+
+    if (supabaseError) throw supabaseError;
+
+    return { success: true };
+  };
+
   return {
     addMessage,
+    deleteMessage,
     isLoading,
     error,
   };
 };
 
-export const useAddSession = () => {
+export const useSessionOperations = () => {
   const addSession = async (
     session: Omit<SessionInterface, "sessionId" | "createdAt" | "updatedAt">
   ) => {
@@ -73,27 +85,33 @@ export const useAddSession = () => {
 
     return newSession;
   };
-  return { addSession };
-};
 
-export const deleteMessage = async (messageId: string) => {
-  const { error: supabaseError } = await supabase
-    .from("messages")
-    .delete()
-    .eq("messageId", messageId);
+  const addLocationsToSession = async (
+    sessionId: string,
+    locations: string[]
+  ) => {
+    const { error: supabaseError } = await supabase
+      .from("sessions")
+      .update({
+        locations,
+      })
+      .eq("session_id", sessionId);
 
-  if (supabaseError) throw supabaseError;
+    if (supabaseError) throw supabaseError;
 
-  return { success: true };
-};
+    return { success: true };
+  };
 
-export const deleteSession = async (sessionId: string) => {
-  const { error: supabaseError } = await supabase
-    .from("sessions")
-    .delete()
-    .eq("sessionId", sessionId);
+  const deleteSession = async (sessionId: string) => {
+    const { error: supabaseError } = await supabase
+      .from("sessions")
+      .delete()
+      .eq("session_id", sessionId);
 
-  if (supabaseError) throw supabaseError;
+    if (supabaseError) throw supabaseError;
 
-  return { success: true };
+    return { success: true };
+  };
+
+  return { addSession, addLocationsToSession, deleteSession };
 };

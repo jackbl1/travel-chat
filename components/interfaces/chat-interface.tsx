@@ -16,7 +16,10 @@ import {
 import { useGetSessions } from "@/hooks/useSessions";
 import { useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
-import { useAddMessage, useAddSession } from "@/hooks/usePostOperation";
+import {
+  useMessageOperations,
+  useSessionOperations,
+} from "@/hooks/usePostOperation";
 
 const errorMessage: MessageInterface = {
   messageId: "error",
@@ -50,9 +53,10 @@ export default function ChatInterface() {
     addMessage,
     isLoading: isAddMessageLoading,
     error: isAddMessageError,
-  } = useAddMessage();
+  } = useMessageOperations();
   const messages = useGetMessages(activeSessionId ?? "");
-  const { addSession } = useAddSession();
+  const { addSession, deleteSession, addLocationsToSession } =
+    useSessionOperations();
   //const userSessions = useGetSessions(user?.id ?? "");
 
   const displayMessages = error
@@ -114,7 +118,7 @@ export default function ChatInterface() {
 
     if (!activeSessionId) {
       const newSession = await onAddSession(
-        `Session ${sessions?.length ?? 0 + 1}`,
+        `Session ${(sessions?.length ?? 0) + 1}`,
         user?.id ?? "user1"
       );
       await addMessageHelper(
@@ -150,14 +154,8 @@ export default function ChatInterface() {
         console.error("Error:", data.error);
         setError(true);
       } else {
-        // Add the list of locations to the redux state
-        for (const location of data.locations) {
-          dispatch(
-            addLocation({
-              name: location,
-            })
-          );
-        }
+        // Add the list of locations to the session
+        await addLocationsToSession(activeSessionId ?? "", data.locations);
 
         // Add agent message to the database
         await addMessageHelper(

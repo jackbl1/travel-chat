@@ -24,8 +24,6 @@ function PastTripInterface() {
     return <div>Loading...</div>;
   }
 
-  console.log("rendering with expanded session id:", expandedSessionId);
-
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Past Trips</h1>
@@ -36,8 +34,8 @@ function PastTripInterface() {
               className={`w-full rounded-lg shadow-md transition-transform transform hover:scale-105
                 ${
                   session.sessionId == activeSessionId
-                    ? "bg-gray-200 text-gray-700"
-                    : "bg-gray-400 text-gray-800"
+                    ? "bg-gray-200 text-gray-700 ring-2 ring-gray-500"
+                    : "bg-gray-200 text-gray-800"
                 }
                 ${
                   expandedSessionId === session.sessionId ? "bg-gray-300" : ""

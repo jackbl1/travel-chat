@@ -13,6 +13,15 @@ import {
   AudioLines,
 } from "lucide-react";
 import useDebounce from "../../hooks/useDebounce";
+import { useDispatch } from "react-redux";
+import { setCurrentView, View } from "@/redux/viewSlice";
+import { setActiveSessionId } from "@/redux/itinerarySlice";
+import { useSupabase } from "@/contexts/SupabaseContext";
+import {
+  useMessageOperations,
+  useSessionOperations,
+} from "@/hooks/usePostOperation";
+import { useGetSessions } from "@/hooks/useSessions";
 
 interface Action {
   id: string;
@@ -77,6 +86,12 @@ function ActionSearchBar() {
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
+  const dispatch = useDispatch();
+  const { user } = useSupabase();
+  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const { addSession } = useSessionOperations();
+  const { addMessage } = useMessageOperations();
+
   useEffect(() => {
     if (!isFocused) {
       setResult(null);
@@ -97,8 +112,38 @@ function ActionSearchBar() {
     setResult({ actions: filteredActions });
   }, [debouncedQuery, isFocused]);
 
+  const handleCreateSession = async (content: string) => {
+    try {
+      const newSession = await addSession({
+        name: `Session ${sessions?.length ?? 0 + 1}`,
+        userId: user?.id ?? "user1",
+      });
+
+      if (newSession?.session_id) {
+        dispatch(setActiveSessionId(newSession.session_id));
+        await addMessage({
+          sessionId: newSession.session_id,
+          userId: user?.id ?? "",
+          role: "user",
+          content: content,
+        });
+        dispatch(setCurrentView(View.CurrentChat));
+      }
+    } catch (error) {
+      console.error("Error creating session:", error);
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setQuery(e.target.value);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (query.trim()) {
+      await handleCreateSession(query);
+      setQuery("");
+    }
   };
 
   const container = {
@@ -162,15 +207,17 @@ function ActionSearchBar() {
             Ready for your next trip?
           </label>
           <div className="relative">
-            <Input
-              type="text"
-              placeholder="Where can I take you?"
-              value={query}
-              onChange={handleInputChange}
-              onFocus={handleFocus}
-              onBlur={() => setTimeout(() => setIsFocused(false), 200)}
-              className="pl-3 pr-9 py-1.5 h-9 text-sm rounded-lg focus-visible:ring-offset-0"
-            />
+            <form onSubmit={handleSubmit}>
+              <Input
+                type="text"
+                placeholder="Where can I take you?"
+                value={query}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={() => setTimeout(() => setIsFocused(false), 200)}
+                className="pl-3 pr-9 py-1.5 h-9 text-sm rounded-lg focus-visible:ring-offset-0"
+              />
+            </form>
             <div className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4">
               <AnimatePresence mode="popLayout">
                 {query.length > 0 ? (
@@ -216,7 +263,7 @@ function ActionSearchBar() {
                       className="px-3 py-2 flex items-center justify-between hover:bg-gray-200 dark:hover:bg-zinc-900  cursor-pointer rounded-md"
                       variants={item}
                       layout
-                      onClick={() => setSelectedAction(action)}
+                      onClick={() => handleCreateSession(action.label)}
                     >
                       <div className="flex items-center gap-2 justify-between">
                         <div className="flex items-center gap-2">

@@ -1,3 +1,14 @@
+type LocationType = {
+  name: string;
+  placeholder?: string;
+  geolocation?: LatLongType;
+};
+
+type LatLongType = {
+  lat: number;
+  long: number;
+};
+
 export type SessionInterface = {
   sessionId: string;
   name: string;
