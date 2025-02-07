@@ -42,6 +42,7 @@ export default function ChatInterface() {
   const [userInput, setUserInput] = useState("");
 
   const { user } = useSupabase();
+  const { data: sessions } = useGetSessions(user?.id ?? "");
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
@@ -76,7 +77,8 @@ export default function ChatInterface() {
     }
   };
 
-  const onAddMessage = async (
+  // Helper function to add a message
+  const addMessageHelper = async (
     sessionId: string,
     userId: string,
     role: string,
@@ -90,9 +92,12 @@ export default function ChatInterface() {
         role,
         userId,
       });
-      //TODO: Add locations to the session if new locations are generated here
+      // Handle additional logic for locations if needed
     } catch (e) {
-      console.log("Error adding message:", e);
+      console.error("Error adding message:", e);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -105,14 +110,14 @@ export default function ChatInterface() {
     }
 
     setLoading(true);
+    setError(false);
 
-    // TODO: create safety catches here if there's no active session id
     if (!activeSessionId) {
       const newSession = await onAddSession(
-        `Session ${new Date().toLocaleDateString()}`,
+        `Session ${sessions?.length ?? 0 + 1}`,
         user?.id ?? "user1"
       );
-      await onAddMessage(
+      await addMessageHelper(
         newSession?.session_id ?? "",
         user?.id ?? "",
         "user",
@@ -120,8 +125,7 @@ export default function ChatInterface() {
         []
       );
     } else {
-      // Save the new message to the Supabase sessions database
-      await onAddMessage(
+      await addMessageHelper(
         activeSessionId ?? "",
         user?.id ?? "",
         "user",
@@ -129,16 +133,6 @@ export default function ChatInterface() {
         []
       );
     }
-
-    // Send user question and history to API
-    // TODO: send history along with user input
-    // const response = await fetch("/api/chat", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify({ question: userInput, history: history }),
-    // });
 
     try {
       const res = await fetch("/api/chat", {
@@ -166,7 +160,7 @@ export default function ChatInterface() {
         }
 
         // Add agent message to the database
-        onAddMessage(
+        await addMessageHelper(
           activeSessionId ?? "",
           user?.id ?? "",
           "agent",
@@ -174,8 +168,8 @@ export default function ChatInterface() {
           data.locations
         );
       }
-    } catch (error) {
-      console.error("Error:", error);
+    } catch (fetchError) {
+      console.error("Error sending message to API:", fetchError);
       setError(true);
     } finally {
       setLoading(false);

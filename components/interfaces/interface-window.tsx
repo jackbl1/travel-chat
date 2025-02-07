@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import ChatInterface from "./chat-interface";
 import MapInterface from "./map-interface";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
@@ -14,17 +14,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import NewChatInterface from "./new-chat-interface";
-
-enum View {
-  NewChat = "new-chat",
-  CurrentChat = "current-chat",
-  Itinerary = "itinerary",
-  Map = "map",
-  PastTrips = "past-trips",
-}
+import PastTripInterface from "./past-trip-interface";
+import { useDispatch, useSelector } from "react-redux";
+import { getCurrentView, setCurrentView, View } from "@/redux/viewSlice";
+import { getActiveSessionId } from "@/redux/itinerarySlice";
+import { useGetSessions } from "@/hooks/useSessions";
+import { useSupabase } from "@/contexts/SupabaseContext";
 
 function InterfaceWindow() {
-  const [currentView, setCurrentView] = useState<View>(View.NewChat);
+  const dispatch = useDispatch();
+  const currentView = useSelector(getCurrentView);
+  const activeSessionId = useSelector(getActiveSessionId);
+  const { user } = useSupabase();
+  const { data: sessions } = useGetSessions(user?.id ?? "");
+
+  const activeSession = sessions?.find(
+    (session) => session.sessionId === activeSessionId
+  );
 
   const renderContent = () => {
     switch (currentView) {
@@ -37,7 +43,7 @@ function InterfaceWindow() {
       case View.Map:
         return <MapInterface />;
       case View.PastTrips:
-        return <div>Past Trips Content</div>;
+        return <PastTripInterface />;
       default:
         return <div>Current Chat Content</div>;
     }
@@ -57,6 +63,11 @@ function InterfaceWindow() {
             />
             <span className="font-semibold">Trip-Gen-Bot-ZX3000</span>
           </div>
+          {activeSession && (
+            <span className="text-sm text-gray-500 ml-2">
+              • {activeSession.name}
+            </span>
+          )}
         </div>
         <ScrollArea className="h-[calc(100vh-64px)]">
           <div className="space-y-4 p-4">
@@ -68,9 +79,7 @@ function InterfaceWindow() {
                   currentView === View.NewChat &&
                     "bg-primary/10 hover:bg-primary/10"
                 )}
-                onClick={() => {
-                  setCurrentView(View.NewChat);
-                }}
+                onClick={() => dispatch(setCurrentView(View.NewChat))}
               >
                 <LayoutGrid className="mr-2 h-4 w-4" />
                 New Chat
@@ -82,7 +91,7 @@ function InterfaceWindow() {
                   currentView === View.CurrentChat &&
                     "bg-primary/10 hover:bg-primary/10"
                 )}
-                onClick={() => setCurrentView(View.CurrentChat)}
+                onClick={() => dispatch(setCurrentView(View.CurrentChat))}
               >
                 <LayoutGrid className="mr-2 h-4 w-4" />
                 Current Chat
@@ -94,7 +103,7 @@ function InterfaceWindow() {
                   currentView === View.Itinerary &&
                     "bg-primary/10 hover:bg-primary/10"
                 )}
-                onClick={() => setCurrentView(View.Itinerary)}
+                onClick={() => dispatch(setCurrentView(View.Itinerary))}
               >
                 <Functions className="mr-2 h-4 w-4" />
                 Itinerary
@@ -106,7 +115,7 @@ function InterfaceWindow() {
                   currentView === View.Map &&
                     "bg-primary/10 hover:bg-primary/10"
                 )}
-                onClick={() => setCurrentView(View.Map)}
+                onClick={() => dispatch(setCurrentView(View.Map))}
               >
                 <Layers className="mr-2 h-4 w-4" />
                 Map
@@ -120,7 +129,7 @@ function InterfaceWindow() {
                   currentView === View.PastTrips &&
                     "bg-primary/10 hover:bg-primary/10"
                 )}
-                onClick={() => setCurrentView(View.PastTrips)}
+                onClick={() => dispatch(setCurrentView(View.PastTrips))}
               >
                 <BarChart2 className="mr-2 h-4 w-4" />
                 Past Trips
