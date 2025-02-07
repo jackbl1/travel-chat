@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       .from("messages")
       .select("*")
       .eq("session_id", parsed.data.sessionId)
-      .order("timestamp", { ascending: true });
+      .order("created_at", { ascending: true });
 
     if (error) {
       throw error;

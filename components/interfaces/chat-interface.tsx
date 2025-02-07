@@ -69,8 +69,8 @@ export default function ChatInterface() {
       //   userId,
       // });
       const res = await addSession({ name, userId });
-      dispatch(setActiveSessionId(res.sessionId));
-      console.log("session was created", res);
+      dispatch(setActiveSessionId(res.session_id));
+      return res;
     } catch (e) {
       console.log("Error adding session:", e);
     }
@@ -106,21 +106,29 @@ export default function ChatInterface() {
 
     setLoading(true);
 
+    // TODO: create safety catches here if there's no active session id
     if (!activeSessionId) {
-      await onAddSession(
+      const newSession = await onAddSession(
         `Session ${new Date().toLocaleDateString()}`,
         user?.id ?? "user1"
       );
+      await onAddMessage(
+        newSession?.session_id ?? "",
+        user?.id ?? "",
+        "user",
+        userInput,
+        []
+      );
+    } else {
+      // Save the new message to the Supabase sessions database
+      await onAddMessage(
+        activeSessionId ?? "",
+        user?.id ?? "",
+        "user",
+        userInput,
+        []
+      );
     }
-
-    // Save the new message to the Supabase sessions database
-    await onAddMessage(
-      activeSessionId ?? "",
-      user?.id ?? "",
-      "user",
-      userInput,
-      []
-    );
 
     // Send user question and history to API
     // TODO: send history along with user input
