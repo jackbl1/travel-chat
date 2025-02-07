@@ -4,7 +4,13 @@ import { useSelector, useDispatch } from "react-redux";
 import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useGetSessions } from "@/hooks/useSessions";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  PlaneTakeoff,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 function PastTripInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
@@ -24,6 +30,28 @@ function PastTripInterface() {
     return <div>Loading...</div>;
   }
 
+  if (!sessions || sessions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-full text-center px-4">
+        <PlaneTakeoff className="h-16 w-16 text-gray-700 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+          No trips yet
+        </h2>
+        <p className="text-gray-500 mb-8 max-w-md">
+          Start planning your first adventure! Create a new chat to begin
+          exploring destinations and crafting your perfect itinerary.
+        </p>
+        <Button
+          onClick={() => dispatch(setCurrentView(View.NewChat))}
+          className="flex items-center gap-2 bg-gray-700"
+        >
+          <Plus className="h-4 w-4" />
+          Start New Trip
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Past Trips</h1>
@@ -41,8 +69,8 @@ function PastTripInterface() {
                   expandedSessionId === session.sessionId ? "bg-gray-300" : ""
                 }`}
             >
-              <button
-                className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-lg"
+              <div
+                className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-lg cursor-pointer"
                 onClick={() => handleSessionClick(session.sessionId)}
                 aria-label={`View session ${session.name}`}
               >
@@ -71,7 +99,7 @@ function PastTripInterface() {
                     </button>
                   </div>
                 </div>
-              </button>
+              </div>
               {expandedSessionId === session.sessionId && (
                 <div className="px-4 pb-4 border-t border-gray-400 mt-2 pt-2">
                   <h2 className="text-lg font-semibold mb-2">

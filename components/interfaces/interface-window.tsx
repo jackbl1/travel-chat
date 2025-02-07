@@ -6,10 +6,12 @@ import MapInterface from "./map-interface";
 import { ScrollArea } from "@radix-ui/react-scroll-area";
 import Image from "next/image";
 import {
-  LayoutGrid,
-  SettingsIcon as Functions,
-  Layers,
-  BarChart2,
+  MessageCirclePlus,
+  Map,
+  MapPinned,
+  Bot,
+  ClipboardList,
+  LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -21,6 +23,13 @@ import { getActiveSessionId } from "@/redux/itinerarySlice";
 import { useGetSessions } from "@/hooks/useSessions";
 import { useSupabase } from "@/contexts/SupabaseContext";
 
+interface NavButton {
+  label: string;
+  view: View;
+  icon: LucideIcon;
+  disabled?: boolean;
+}
+
 function InterfaceWindow() {
   const dispatch = useDispatch();
   const currentView = useSelector(getCurrentView);
@@ -31,6 +40,40 @@ function InterfaceWindow() {
   const activeSession = sessions?.find(
     (session) => session.sessionId === activeSessionId
   );
+
+  const getNavButtons = () => {
+    const buttons: NavButton[] = [
+      {
+        label: "New Chat",
+        view: View.NewChat,
+        icon: MessageCirclePlus,
+      },
+      {
+        label: "Current Chat",
+        view: View.CurrentChat,
+        icon: Bot,
+      },
+      {
+        label: "Itinerary",
+        view: View.Itinerary,
+        icon: Map,
+      },
+      {
+        label: "Map",
+        view: View.Map,
+        icon: MapPinned,
+        disabled:
+          activeSession?.locations && activeSession.locations.length === 0,
+      },
+      {
+        label: "Past Trips",
+        view: View.PastTrips,
+        icon: ClipboardList,
+      },
+    ];
+
+    return buttons;
+  };
 
   const renderContent = () => {
     switch (currentView) {
@@ -61,7 +104,7 @@ function InterfaceWindow() {
               width={32}
               height={32}
             />
-            <span className="font-semibold">Trip-Gen-Bot-ZX3000</span>
+            <span className="font-semibold">Travel Chat</span>
           </div>
           {activeSession && (
             <span className="text-sm text-gray-500 ml-2">
@@ -72,69 +115,22 @@ function InterfaceWindow() {
         <ScrollArea className="h-[calc(100vh-64px)]">
           <div className="space-y-4 p-4">
             <nav className="space-y-2">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  currentView === View.NewChat &&
-                    "bg-primary/10 hover:bg-primary/10"
-                )}
-                onClick={() => dispatch(setCurrentView(View.NewChat))}
-              >
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                New Chat
-              </Button>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  currentView === View.CurrentChat &&
-                    "bg-primary/10 hover:bg-primary/10"
-                )}
-                onClick={() => dispatch(setCurrentView(View.CurrentChat))}
-              >
-                <LayoutGrid className="mr-2 h-4 w-4" />
-                Current Chat
-              </Button>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  currentView === View.Itinerary &&
-                    "bg-primary/10 hover:bg-primary/10"
-                )}
-                onClick={() => dispatch(setCurrentView(View.Itinerary))}
-              >
-                <Functions className="mr-2 h-4 w-4" />
-                Itinerary
-              </Button>
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  currentView === View.Map &&
-                    "bg-primary/10 hover:bg-primary/10"
-                )}
-                onClick={() => dispatch(setCurrentView(View.Map))}
-              >
-                <Layers className="mr-2 h-4 w-4" />
-                Map
-              </Button>
+              {getNavButtons().map((button) => (
+                <Button
+                  key={button.label}
+                  variant="ghost"
+                  className={cn(
+                    "w-full justify-start",
+                    currentView === button.view &&
+                      "bg-primary/10 hover:bg-primary/10"
+                  )}
+                  onClick={() => dispatch(setCurrentView(button.view))}
+                >
+                  <button.icon className="mr-2 h-4 w-4" />
+                  {button.label}
+                </Button>
+              ))}
             </nav>
-            <div className="pt-4 border-t">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start",
-                  currentView === View.PastTrips &&
-                    "bg-primary/10 hover:bg-primary/10"
-                )}
-                onClick={() => dispatch(setCurrentView(View.PastTrips))}
-              >
-                <BarChart2 className="mr-2 h-4 w-4" />
-                Past Trips
-              </Button>
-            </div>
           </div>
         </ScrollArea>
       </div>

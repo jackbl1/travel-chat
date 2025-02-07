@@ -21,6 +21,42 @@ import {
   useSessionOperations,
 } from "@/hooks/usePostOperation";
 
+const defaultMessageContent = [
+  // Natural Wonders
+  "How about a stay in Costa Rica's lush jungle?",
+  "The Himalayas are nice this time of year.",
+  "What about a trip to the Mediterranean?",
+  "The Galapagos are full of unique wildlife.",
+  "The Appalachians hide lovely mountain towns.",
+  "Iceland's northern lights are simply magical.",
+  "The Great Barrier Reef is calling your name.",
+  "Explore the mysteries of the Amazon rainforest.",
+  "Experience the ancient wonders of Kyoto.",
+  "Paris is always a good idea, isn't it?",
+  "Morocco's markets are a feast for the senses.",
+  "Discover the hidden gems of old Havana.",
+  "Walk the cobblestone streets of Prague.",
+  "Explore the temples of Angkor Wat.",
+  "The markets of Istanbul await your visit, my friend.",
+  "Feel the rhythm of Rio de Janeiro.",
+  "New Zealand's fjords are an adventurer's dream.",
+  "Trek through Patagonia's untamed wilderness.",
+  "Safari through Tanzania's Serengeti Plains.",
+  "Dive into the crystal waters of the Maldives.",
+  "Hike the breathtaking trails of Banff.",
+  "Experience the majesty of the Norwegian fjords.",
+  "Discover the hidden beaches of Thailand.",
+  "Explore Vietnam's stunning Ha Long Bay.",
+  "Find tranquility in Bhutan's mountain monasteries.",
+  "Wander through Croatia's lavender fields.",
+  "Discover the quiet beauty of Slovenia's lakes.",
+  "Experience the magic of Myanmar's temples.",
+  "Explore Colombia's coffee country.",
+  "Trek through Nepal's remote villages.",
+  "Find peace in Tuscany's rolling hills.",
+  "Discover the wild beauty of Scotland's Highlands.",
+];
+
 const errorMessage: MessageInterface = {
   messageId: "error",
   sessionId: "session1",
@@ -30,14 +66,17 @@ const errorMessage: MessageInterface = {
   createdAt: new Date().toLocaleTimeString(),
 };
 
-const defaultMessage: MessageInterface = {
-  messageId: "error",
+const getRandomDefaultMessage = (): MessageInterface => ({
+  messageId: "default",
   sessionId: "session1",
   userId: "user1",
   role: "agent",
-  content: "Hello, I am Trip-Gen-Bot, where can I take ya?",
+  content:
+    defaultMessageContent[
+      Math.floor(Math.random() * defaultMessageContent.length)
+    ],
   createdAt: new Date().toLocaleTimeString(),
-};
+});
 
 export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
@@ -61,11 +100,14 @@ export default function ChatInterface() {
 
   const displayMessages = error
     ? [
-        defaultMessage,
+        getRandomDefaultMessage(),
         ...(Array.isArray(messages.data) ? messages.data : []),
         errorMessage,
       ]
-    : [defaultMessage, ...(Array.isArray(messages.data) ? messages.data : [])];
+    : [
+        getRandomDefaultMessage(),
+        ...(Array.isArray(messages.data) ? messages.data : []),
+      ];
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
@@ -209,7 +251,7 @@ export default function ChatInterface() {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">
-                    {message.role === "agent" ? "Trip-Gen-Bot-ZX3000" : "User"}
+                    {message.role === "agent" ? "Travel Chat" : "User"}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {message.createdAt}
@@ -253,9 +295,7 @@ export default function ChatInterface() {
               />
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    Trip-Gen-Bot-ZX3000
-                  </span>
+                  <span className="text-sm font-medium">Travel Chat</span>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">Generating...</p>

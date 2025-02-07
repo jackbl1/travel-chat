@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trip Gen",
-  description: "Trip Generator at your service",
+  title: "Travel Chat",
+  description: "The travel planner you've always wanted.",
 };
 
 export default function RootLayout({

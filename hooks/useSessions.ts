@@ -10,8 +10,12 @@ export const useGetSessions = (userId: string) => {
       const response = await fetch(`${apiRoutes.session}?userId=${userId}`);
       const data = await response.json();
 
+      if (!data) {
+        return [];
+      }
+
       // Map the response data to match SessionInterface
-      return data.map((session: any) => ({
+      return data.map((session) => ({
         sessionId: session.session_id,
         userId: session.user_id,
         name: session.name,
