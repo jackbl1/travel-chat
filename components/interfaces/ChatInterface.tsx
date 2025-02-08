@@ -98,16 +98,18 @@ export default function ChatInterface() {
     useSessionOperations();
   //const userSessions = useGetSessions(user?.id ?? "");
 
-  const displayMessages = error
-    ? [
-        getRandomDefaultMessage(),
-        ...(Array.isArray(messages.data) ? messages.data : []),
-        errorMessage,
-      ]
-    : [
-        getRandomDefaultMessage(),
-        ...(Array.isArray(messages.data) ? messages.data : []),
-      ];
+  const getDisplayMessages = () => {
+    const messageArray = [];
+    if (!messages.data || messages.data.length === 0) {
+      messageArray.push(getRandomDefaultMessage());
+    } else {
+      messageArray.push(...(Array.isArray(messages.data) ? messages.data : []));
+    }
+    if (error) {
+      messageArray.push(errorMessage);
+    }
+    return messageArray;
+  };
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
@@ -231,7 +233,7 @@ export default function ChatInterface() {
     <div className="flex-1 flex flex-col h-screen">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {displayMessages.map((message, index) => (
+          {getDisplayMessages().map((message, index) => (
             <div
               key={index}
               className={cn(
