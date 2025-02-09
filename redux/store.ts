@@ -1,12 +1,16 @@
 import { configureStore } from "@reduxjs/toolkit";
 import itineraryReducer from "./itinerarySlice";
 import viewReducer from "./viewSlice";
+import sessionDetailReducer from "./sessionDetailSlice";
+import mapReducer from "./mapSlice";
 
 export const makeStore = () => {
   return configureStore({
     reducer: {
       itinerary: itineraryReducer,
       view: viewReducer,
+      sessionDetail: sessionDetailReducer,
+      map: mapReducer,
     },
   });
 };

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
+import { getSelectedLocation } from "@/redux/mapSlice";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import ErrorMessage from "./ErrorMessage";
 import MapsInfoMessage from "./MapsInfoMessage";
@@ -27,6 +28,7 @@ const center = {
 
 export default function LocationMap({ apiKey }: { apiKey?: string }) {
   const [isClient, setIsClient] = useState(false);
+  const mapRef = useRef<google.maps.Map | null>(null);
   const [geocodedLocations, setGeocodedLocations] = useState<
     GeocodedLocation[]
   >([]);
@@ -35,10 +37,24 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
 
   const { user } = useSupabase();
   const activeSessionId = useSelector(getActiveSessionId);
+  const selectedLocation = useSelector(getSelectedLocation);
   const { data: sessions } = useGetSessions(user?.id ?? "");
   const activeSession = sessions?.find(
     (session) => session.sessionId === activeSessionId
   );
+
+  // TODO: fix this, effect should handle nav with selected location
+  useEffect(() => {
+    if (selectedLocation && geocodedLocations.length > 0) {
+      const location = geocodedLocations.find(
+        (loc) => loc.hostname === selectedLocation
+      );
+      if (location && mapRef.current) {
+        mapRef.current.panTo({ lat: location.lat, lng: location.lng });
+        mapRef.current.setZoom(15);
+      }
+    }
+  }, [selectedLocation, geocodedLocations]);
 
   useEffect(() => {
     setIsClient(true);

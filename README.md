@@ -1,11 +1,11 @@
-# Trip Generator
+# Travel Chat
 
 <div align="center">
   <img src="public/travel-dwarf.webp" alt="Travel Dwarf" width="200"/>
   <p><em>Your AI-powered travel companion</em></p>
 </div>
 
-Trip Generator is an intelligent travel planning application that helps you create personalized trip itineraries through natural conversation. Built with Next.js and powered by AI, it offers an intuitive interface for planning your next adventure.
+Travel Chat is an intelligent travel planning application that helps you create personalized trip itineraries through natural conversation. Built with Next.js and powered by AI, it offers an intuitive interface for planning your next adventure.
 
 ## Features
 
