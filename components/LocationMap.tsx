@@ -1,14 +1,10 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useSelector } from "react-redux";
-import { getSelectedLocation } from "@/redux/mapSlice";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import ErrorMessage from "./ErrorMessage";
 import MapsInfoMessage from "./MapsInfoMessage";
-import { getActiveSessionId } from "@/redux/itinerarySlice";
-import { useGetSessions } from "@/hooks/useSessions";
-import { useSupabase } from "@/contexts/SupabaseContext";
+import { LocationType } from "@/lib/types";
 
 interface GeocodedLocation extends Location {
   lat: number;
@@ -26,7 +22,15 @@ const center = {
   lng: 0,
 };
 
-export default function LocationMap({ apiKey }: { apiKey?: string }) {
+export const LocationMap = ({
+  apiKey,
+  locations,
+  selectedLocation,
+}: {
+  apiKey?: string;
+  locations: LocationType[];
+  selectedLocation: string | null;
+}) => {
   const [isClient, setIsClient] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [geocodedLocations, setGeocodedLocations] = useState<
@@ -35,15 +39,6 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [failedLocations, setFailedLocations] = useState<string[]>([]);
 
-  const { user } = useSupabase();
-  const activeSessionId = useSelector(getActiveSessionId);
-  const selectedLocation = useSelector(getSelectedLocation);
-  const { data: sessions } = useGetSessions(user?.id ?? "");
-  const activeSession = sessions?.find(
-    (session) => session.sessionId === activeSessionId
-  );
-
-  // TODO: fix this, effect should handle nav with selected location
   useEffect(() => {
     if (selectedLocation && geocodedLocations.length > 0) {
       const location = geocodedLocations.find(
@@ -100,16 +95,15 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
     if (isLoaded && apiKey) {
       setFailedLocations([]); // Reset failed locations on new geocoding attempt
       // Skip geocoding if all locations already have coordinates
-      const locations =
-        activeSession?.locations?.map((location) => ({ name: location })) ?? [];
-      if (locations.every((loc) => "lat" in loc && "lng" in loc)) {
-        setGeocodedLocations(locations as GeocodedLocation[]);
-        return;
-      }
+      const curLocations = locations ?? [];
+      // if (curLocations.every((loc) => "lat" in loc && "lng" in loc)) {
+      //   setGeocodedLocations(curLocations as GeocodedLocation[]);
+      //   return;
+      // }
 
       setIsGeocoding(true);
       const geocoder = new window.google.maps.Geocoder();
-      const promises = locations.map(
+      const promises = curLocations.map(
         (location) =>
           new Promise<{
             success: boolean;
@@ -128,7 +122,10 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
             geocoder.geocode({ address: location.name }, (results, status) => {
               if (status === "OK" && results[0]) {
                 const { lat, lng } = results[0].geometry.location.toJSON();
-                resolve({ success: true, location: { ...location, lat, lng } });
+                resolve({
+                  success: true,
+                  location: { ...location, lat, lng },
+                });
               } else {
                 resolve({ success: false, name: location.name });
               }
@@ -152,7 +149,7 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
         })
         .finally(() => setIsGeocoding(false));
     }
-  }, [isLoaded, apiKey, activeSession]);
+  }, [isLoaded, apiKey, locations]);
 
   if (!isClient) {
     return <ErrorMessage message="!isClient" />;
@@ -211,4 +208,4 @@ export default function LocationMap({ apiKey }: { apiKey?: string }) {
       )}
     </div>
   );
-}
+};

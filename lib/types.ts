@@ -1,10 +1,10 @@
-type LocationType = {
+export type LocationType = {
   name: string;
   placeholder?: string;
   geolocation?: LatLongType;
 };
 
-type LatLongType = {
+export type LatLongType = {
   lat: number;
   long: number;
 };

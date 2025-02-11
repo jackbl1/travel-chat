@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -82,6 +82,7 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
+  const [defaultMessage] = useState(getRandomDefaultMessage);
 
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id ?? "");
@@ -98,10 +99,10 @@ export default function ChatInterface() {
     useSessionOperations();
   //const userSessions = useGetSessions(user?.id ?? "");
 
-  const getDisplayMessages = () => {
+  const getDisplayMessages = useCallback(() => {
     const messageArray = [];
     if (!messages.data || messages.data.length === 0) {
-      messageArray.push(getRandomDefaultMessage());
+      messageArray.push(defaultMessage);
     } else {
       messageArray.push(...(Array.isArray(messages.data) ? messages.data : []));
     }
@@ -109,7 +110,7 @@ export default function ChatInterface() {
       messageArray.push(errorMessage);
     }
     return messageArray;
-  };
+  }, [messages, error, defaultMessage]);
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {

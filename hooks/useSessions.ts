@@ -14,8 +14,11 @@ export const useGetSessions = (userId: string) => {
         return [];
       }
 
+      // Ensure data is an array
+      const sessionsArray = Array.isArray(data) ? data : data.sessions || [];
+
       // Map the response data to match SessionInterface
-      return data.map((session) => ({
+      return sessionsArray.map((session) => ({
         sessionId: session.session_id,
         userId: session.user_id,
         name: session.name,
