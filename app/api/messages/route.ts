@@ -28,14 +28,6 @@ const messageCreateSchema = z.object({
   userId: z.string().uuid(),
   role: z.string().min(1),
   content: z.string().min(1),
-  locations: z
-    .array(
-      z.object({
-        lat: z.number(),
-        lng: z.number(),
-      })
-    )
-    .optional(),
 });
 
 // Error handling utility
@@ -91,7 +83,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { sessionId, userId, role, content, locations } = parsed.data;
+    const { sessionId, userId, role, content } = parsed.data;
 
     const { data, error } = await supabase
       .from("messages")
@@ -103,7 +95,6 @@ export async function POST(request: Request) {
           role,
           content,
           created_at: new Date().toISOString(),
-          locations,
         },
       ])
       .select()

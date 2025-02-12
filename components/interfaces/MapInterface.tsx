@@ -1,7 +1,6 @@
 "use client";
 
 import { LocationMap } from "@/components/LocationMap";
-import { useState, useCallback, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { getSelectedLocation } from "@/redux/mapSlice";
 import { getActiveSessionId } from "@/redux/itinerarySlice";

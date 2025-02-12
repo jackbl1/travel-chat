@@ -13,8 +13,12 @@ import {
   getActiveSessionId,
   setActiveSessionId,
 } from "@/redux/itinerarySlice";
-import { useGetSessions } from "@/hooks/useSessions";
-import { useGetMessages } from "@/hooks/useMessages";
+import {
+  useAddSession,
+  useGetSessions,
+  useUpdateSessionWithLocations,
+} from "@/hooks/useSessions";
+import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
 import {
   useMessageOperations,
@@ -89,36 +93,43 @@ export default function ChatInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  const {
-    addMessage,
-    isLoading: isAddMessageLoading,
-    error: isAddMessageError,
-  } = useMessageOperations();
-  const messages = useGetMessages(activeSessionId ?? "");
-  const { addSession, deleteSession, addLocationsToSession } =
-    useSessionOperations();
+  // const {
+  //   addMessage,
+  //   isLoading: isAddMessageLoading,
+  //   error: isAddMessageError,
+  // } = useMessageOperations();
+  const { data: messages, refetch: refetchMessages } = useGetMessages(
+    activeSessionId ?? ""
+  );
+  const addMessageMutation = useAddMessage();
+  const addSessionMutation = useAddSession();
+  const { mutateAsync: updateSessionLocations } =
+    useUpdateSessionWithLocations();
+  // const { addSession, deleteSession, addLocationsToSession } =
+  //   useSessionOperations();
   //const userSessions = useGetSessions(user?.id ?? "");
 
   const getDisplayMessages = useCallback(() => {
     const messageArray = [];
-    if (!messages.data || messages.data.length === 0) {
+    if (!activeSessionId && (!messages || messages.length === 0)) {
       messageArray.push(defaultMessage);
-    } else {
-      messageArray.push(...(Array.isArray(messages.data) ? messages.data : []));
+    }
+    if (messages && Array.isArray(messages)) {
+      messageArray.push(...messages);
     }
     if (error) {
       messageArray.push(errorMessage);
     }
     return messageArray;
-  }, [messages, error, defaultMessage]);
+  }, [messages, error, activeSessionId, defaultMessage]);
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
-      // const res = await createSessionMutation.mutateAsync({
-      //   name,
-      //   userId,
-      // });
-      const res = await addSession({ name, userId });
+      const res = await addSessionMutation.mutateAsync({
+        name,
+        userId,
+      });
+      //const res = await addSession({ name, userId });
       dispatch(setActiveSessionId(res.session_id));
       return res;
     } catch (e) {
@@ -135,7 +146,13 @@ export default function ChatInterface() {
     locations: string[]
   ) => {
     try {
-      await addMessage({
+      // await addMessage({
+      //   sessionId,
+      //   content,
+      //   role,
+      //   userId,
+      // });
+      await addMessageMutation.mutateAsync({
         sessionId,
         content,
         role,
@@ -153,68 +170,68 @@ export default function ChatInterface() {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const messageContent = userInput.trim();
+    setUserInput("");
 
-    if (userInput.trim() === "") {
-      return;
-    }
+    if (!messageContent) return;
 
     setLoading(true);
     setError(false);
 
-    if (!activeSessionId) {
-      const newSession = await onAddSession(
-        `Session ${(sessions?.length ?? 0) + 1}`,
-        user?.id ?? "user1"
-      );
-      await addMessageHelper(
-        newSession?.session_id ?? "",
-        user?.id ?? "",
-        "user",
-        userInput,
-        []
-      );
-    } else {
-      await addMessageHelper(
-        activeSessionId ?? "",
-        user?.id ?? "",
-        "user",
-        userInput,
-        []
-      );
-    }
-
     try {
-      const res = await fetch("/api/chat", {
+      // 1. Create session if not already in active session
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const newSession = await onAddSession(
+          `Session ${(sessions?.length ?? 0) + 1}`,
+          user?.id ?? "user1"
+        );
+        sessionId = newSession?.session_id;
+        if (!sessionId) {
+          throw new Error("Failed to create new session");
+        }
+      }
+
+      // 2. Add user message to database
+      await addMessageHelper(
+        sessionId,
+        user?.id ?? "",
+        "user",
+        messageContent,
+        []
+      );
+
+      // 3. Get AI response
+      const response = await fetch("/api/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: userInput }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: messageContent }),
       });
 
-      setUserInput("");
-      const data = await res.json();
+      if (!response.ok) throw new Error("API request failed");
+      const data = await response.json();
+      if (data.error) throw new Error(data.error);
 
-      if (data.error) {
-        console.error("Error:", data.error);
-        setError(true);
-      } else {
-        // Add the list of locations to the session
-        await addLocationsToSession(activeSessionId ?? "", data.locations);
-
-        // Add agent message to the database
-        await addMessageHelper(
-          activeSessionId ?? "",
+      // 4. Update session with locations and add agent response
+      await Promise.all([
+        //addLocationsToSession(sessionId, data.locations),
+        await updateSessionLocations({
+          sessionId,
+          locations: data.locations,
+        }),
+        addMessageHelper(
+          sessionId,
           user?.id ?? "",
           "agent",
           data.reply,
           data.locations
-        );
-      }
-    } catch (fetchError) {
-      console.error("Error sending message to API:", fetchError);
+        ),
+      ]);
+    } catch (error) {
+      console.error("Chat error:", error);
       setError(true);
     } finally {
+      await refetchMessages();
       setLoading(false);
     }
   };

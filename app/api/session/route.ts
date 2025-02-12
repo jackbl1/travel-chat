@@ -166,7 +166,7 @@ export async function PATCH(request: Request) {
 
     const updateSchema = z.object({
       name: z.string().min(1).max(100).optional(),
-      description: z.string().optional(),
+      locations: z.array(z.string()).optional(),
     });
 
     const parsed = updateSchema.safeParse(body);
