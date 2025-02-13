@@ -4,12 +4,13 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { GoogleButton } from "./GoogleButton";
 
 export default async function Login(props: { searchParams: Promise<Message> }) {
   const searchParams = await props.searchParams;
   return (
     <div className="flex items-center justify-center w-screen h-screen bg-gray-100">
-      <form className="flex flex-col min-w-64 p-8 bg-white border border-gray-300 rounded-lg shadow-md">
+      <form className="flex flex-col min-w-96 gap-y-2 p-8 bg-white border border-gray-300 rounded-lg shadow-md">
         <h1 className="text-2xl font-medium mb-4">Sign in</h1>
         <p className="text-sm text-foreground mb-4">
           Dont have an account?
@@ -44,6 +45,7 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
           Sign in
         </SubmitButton>
         <FormMessage message={searchParams} />
+        <GoogleButton />
         <Link href="/" className="mt-4 text-blue-500 underline">
           &larr; Back to Home
         </Link>

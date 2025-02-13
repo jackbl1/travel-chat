@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "@/redux/providers";
 import { SupabaseProvider } from "@/contexts/SupabaseContext";
 import { ReactQueryProvider } from "@/contexts/ReactQueryContext";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,6 +36,7 @@ export default function RootLayout({
             <SupabaseProvider>{children}</SupabaseProvider>
           </Providers>
         </ReactQueryProvider>
+        <Toaster />
       </body>
     </html>
   );
