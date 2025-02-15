@@ -88,7 +88,7 @@ function ActionSearchBar() {
 
   const dispatch = useDispatch();
   const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const { data: sessions } = useGetSessions(user?.id);
   const { addSession } = useSessionOperations();
   const { addMessage } = useMessageOperations();
 

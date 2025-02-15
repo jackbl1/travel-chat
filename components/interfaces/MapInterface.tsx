@@ -17,7 +17,7 @@ export default function MapPage() {
   const dispatch = useDispatch();
   const activeSessionId = useSelector(getActiveSessionId);
   const selectedLocation = useSelector(getSelectedLocation);
-  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const { data: sessions } = useGetSessions(user?.id);
   const activeSession = sessions?.find(
     (session) => session.sessionId === activeSessionId
   );
@@ -33,10 +33,10 @@ export default function MapPage() {
       <div className="flex flex-col items-center justify-center w-full h-full text-center px-4">
         <PlaneTakeoff className="h-16 w-16 text-gray-700 mb-4" />
         <h2 className="text-2xl font-semibold text-gray-700 mb-2">
-          No trips yet
+          No destinations yet
         </h2>
         <p className="text-gray-500 mb-8 max-w-md">
-          Start planning your first adventure! Create a new chat to begin
+          Start planning your first adventure! Chat with TravelChat to begin
           exploring destinations and crafting your perfect itinerary.
         </p>
         <Button
@@ -44,7 +44,7 @@ export default function MapPage() {
           className="flex items-center gap-2 bg-gray-700"
         >
           <Plus className="h-4 w-4" />
-          Start New Trip
+          Plan a New Adventure
         </Button>
       </div>
     );

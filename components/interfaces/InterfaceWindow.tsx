@@ -4,7 +4,7 @@ import React from "react";
 import ChatInterface from "./ChatInterface";
 import MapInterface from "./MapInterface";
 import NewChatInterface from "./NewChatInterface";
-import PastTripInterface from "./PastTripInterface";
+import { PastTripInterface } from "./PastTripInterface";
 import { useSelector } from "react-redux";
 import { getCurrentView, View } from "@/redux/viewSlice";
 

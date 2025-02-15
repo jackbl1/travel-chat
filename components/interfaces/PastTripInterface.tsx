@@ -3,23 +3,49 @@ import { useSupabase } from "@/contexts/SupabaseContext";
 import { useSelector, useDispatch } from "react-redux";
 import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
 import { setCurrentView, View } from "@/redux/viewSlice";
-import { useGetSessions } from "@/hooks/useSessions";
+import { useDeleteSession, useGetSessions } from "@/hooks/useSessions";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   PlaneTakeoff,
   Plus,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
-function PastTripInterface() {
+export const PastTripInterface = () => {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
   const { user } = useSupabase();
-  const { data: sessions, isLoading } = useGetSessions(user?.id ?? "");
+  const { data: sessions, isLoading } = useGetSessions(user?.id);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(
     null
   );
+
+  const deleteSessionMutation = useDeleteSession();
+
+  const handleDeleteSession = async (sessionId: string) => {
+    await deleteSessionMutation.mutateAsync({
+      sessionId,
+      userId: user?.id ?? "",
+    });
+
+    // Clear active session if deleting the currently active one
+    if (activeSessionId === sessionId) {
+      dispatch(setActiveSessionId(null));
+    }
+  };
 
   const handleSessionClick = (sessionId: string) => {
     dispatch(setActiveSessionId(sessionId));
@@ -57,9 +83,12 @@ function PastTripInterface() {
       <h1 className="text-2xl font-bold mb-4">Past Trips</h1>
       <ul className="grid gap-4">
         {sessions?.map((session) => (
-          <li key={session.sessionId}>
+          <li
+            className="flex flex-row gap-x-2 items-start"
+            key={session.sessionId}
+          >
             <div
-              className={`w-full rounded-lg shadow-md transition-transform transform hover:scale-105
+              className={`w-full rounded-lg shadow-md transition-transform transform hover:scale-[102%]
                 ${
                   session.sessionId == activeSessionId
                     ? "bg-gray-200 text-gray-700 ring-2 ring-gray-500"
@@ -70,7 +99,7 @@ function PastTripInterface() {
                 }`}
             >
               <div
-                className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 rounded-lg cursor-pointer"
+                className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-500 rounded-lg cursor-pointer"
                 onClick={() => handleSessionClick(session.sessionId)}
                 aria-label={`View session ${session.name}`}
               >
@@ -102,7 +131,7 @@ function PastTripInterface() {
               </div>
               {expandedSessionId === session.sessionId && (
                 <div className="px-4 pb-4 border-t border-gray-400 mt-2 pt-2">
-                  <h2 className="text-lg font-semibold mb-2">
+                  <h2 className="text-md font-semibold mb-2">
                     Session Details
                   </h2>
                   <p className="text-sm text-gray-600">
@@ -111,11 +140,38 @@ function PastTripInterface() {
                 </div>
               )}
             </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  className="p-1.5 mt-4 text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                  aria-label="Delete session"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Are you sure you want to delete this trip?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. All chat history and saved
+                    locations will be permanently deleted.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDeleteSession(session.sessionId)}
+                  >
+                    Delete Trip
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </li>
         ))}
       </ul>
     </div>
   );
-}
-
-export default PastTripInterface;
+};

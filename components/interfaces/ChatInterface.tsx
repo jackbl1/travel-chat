@@ -89,7 +89,7 @@ export default function ChatInterface() {
   const [defaultMessage] = useState(getRandomDefaultMessage);
 
   const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const { data: sessions } = useGetSessions(user?.id);
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 

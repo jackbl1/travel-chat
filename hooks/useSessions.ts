@@ -3,7 +3,7 @@ import { apiRoutes } from "../lib/api-routes";
 import { SessionInterface } from "@/lib/types";
 import axios from "axios";
 
-export const useGetSessions = (userId: string) => {
+export const useGetSessions = (userId?: string) => {
   return useQuery({
     queryKey: ["sessions", userId],
     queryFn: async (): Promise<Array<SessionInterface>> => {
@@ -27,6 +27,7 @@ export const useGetSessions = (userId: string) => {
         locations: session.locations || [],
       }));
     },
+    enabled: !!userId,
   });
 };
 

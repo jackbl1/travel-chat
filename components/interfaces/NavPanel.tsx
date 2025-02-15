@@ -30,7 +30,7 @@ export const NavPanel = () => {
   const currentView = useSelector(getCurrentView);
   const activeSessionId = useSelector(getActiveSessionId);
   const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const { data: sessions } = useGetSessions(user?.id);
 
   const activeSession = sessions?.find(
     (session) => session.sessionId === activeSessionId
