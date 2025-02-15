@@ -93,35 +93,13 @@ export default function ChatInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  // const {
-  //   addMessage,
-  //   isLoading: isAddMessageLoading,
-  //   error: isAddMessageError,
-  // } = useMessageOperations();
   const { data: messages, refetch: refetchMessages } = useGetMessages(
     activeSessionId ?? ""
   );
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSessionLocations } =
-    useUpdateSessionWithLocations();
-  // const { addSession, deleteSession, addLocationsToSession } =
-  //   useSessionOperations();
-  //const userSessions = useGetSessions(user?.id ?? "");
-
-  const getDisplayMessages = useCallback(() => {
-    const messageArray = [];
-    if (!activeSessionId && (!messages || messages.length === 0)) {
-      messageArray.push(defaultMessage);
-    }
-    if (messages && Array.isArray(messages)) {
-      messageArray.push(...messages);
-    }
-    if (error) {
-      messageArray.push(errorMessage);
-    }
-    return messageArray;
-  }, [messages, error, activeSessionId, defaultMessage]);
+    useUpdateSessionWithLocations(); // const { addSession, deleteSession, addLocationsToSession } =
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
@@ -142,23 +120,15 @@ export default function ChatInterface() {
     sessionId: string,
     userId: string,
     role: string,
-    content: string,
-    locations: string[]
+    content: string
   ) => {
     try {
-      // await addMessage({
-      //   sessionId,
-      //   content,
-      //   role,
-      //   userId,
-      // });
       await addMessageMutation.mutateAsync({
         sessionId,
         content,
         role,
         userId,
       });
-      // Handle additional logic for locations if needed
     } catch (e) {
       console.error("Error adding message:", e);
       setError(true);
@@ -193,13 +163,7 @@ export default function ChatInterface() {
       }
 
       // 2. Add user message to database
-      await addMessageHelper(
-        sessionId,
-        user?.id ?? "",
-        "user",
-        messageContent,
-        []
-      );
+      await addMessageHelper(sessionId, user?.id ?? "", "user", messageContent);
 
       // 3. Get AI response
       const response = await fetch("/api/chat", {
@@ -214,18 +178,11 @@ export default function ChatInterface() {
 
       // 4. Update session with locations and add agent response
       await Promise.all([
-        //addLocationsToSession(sessionId, data.locations),
         await updateSessionLocations({
           sessionId,
           locations: data.locations,
         }),
-        addMessageHelper(
-          sessionId,
-          user?.id ?? "",
-          "agent",
-          data.reply,
-          data.locations
-        ),
+        addMessageHelper(sessionId, user?.id ?? "", "agent", data.reply),
       ]);
     } catch (error) {
       console.error("Chat error:", error);
@@ -251,7 +208,50 @@ export default function ChatInterface() {
     <div className="flex-1 flex flex-col h-screen">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {getDisplayMessages().map((message, index) => (
+          <div className="flex gap-2 max-w-[80%]">
+            <Image
+              src="/icon.webp"
+              alt="Icon"
+              className="h-6 w-6 rounded-full"
+              width={32}
+              height={32}
+            />
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Travel Chat</span>
+                <span className="text-sm text-muted-foreground">
+                  {new Date().toLocaleString()}
+                </span>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm whitespace-pre-wrap">
+                  {defaultMessage.content}
+                </p>
+              </div>
+              {
+                //TODO: Decide whether to show these buttons
+                /* {message.role === "agent" && (
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ThumbsUp className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <ThumbsDown className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )} */
+              }
+            </div>
+          </div>
+
+          {messages?.map((message, index) => (
             <div
               key={index}
               className={cn(
@@ -319,6 +319,27 @@ export default function ChatInterface() {
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">Generating...</p>
+                </div>
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="flex gap-2 max-w-[80%]">
+              <Image
+                src="/icon.webp"
+                alt="Icon"
+                className="h-6 w-6 rounded-full"
+                width={32}
+                height={32}
+              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Travel Chat</span>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">
+                    {errorMessage.content}
+                  </p>
                 </div>
               </div>
             </div>

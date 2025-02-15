@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 
@@ -38,7 +38,7 @@ const handleError = (error: Error) => {
   );
 };
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = sessionCreateSchema.safeParse(body);
@@ -50,11 +50,7 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("checkpoint 1");
-
     const { userId, name } = parsed.data;
-
-    console.log("checkpoint 2");
 
     const { data, error } = await supabase
       .from("sessions")
@@ -70,13 +66,9 @@ export async function POST(request: Request) {
       .select()
       .single();
 
-    console.log("checkpoint 3");
-
     if (error) {
       throw error;
     }
-
-    console.log("checkpoint 4", data);
 
     return NextResponse.json(data);
   } catch (error) {
@@ -84,7 +76,8 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+// GET handler by user id
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const parsed = sessionQuerySchema.safeParse({
@@ -100,93 +93,6 @@ export async function GET(request: Request) {
       .select("*")
       .eq("user_id", parsed.data.userId)
       .order("created_at", { ascending: false });
-
-    if (error) {
-      throw error;
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    return handleError(error as Error);
-  }
-}
-
-// DELETE handler
-export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: "Session ID is required" },
-        { status: 400 }
-      );
-    }
-
-    // First, delete all related messages
-    const { error: messagesError } = await supabase
-      .from("messages")
-      .delete()
-      .eq("session_id", sessionId);
-
-    if (messagesError) {
-      throw messagesError;
-    }
-
-    // Then delete the session
-    const { error: sessionError } = await supabase
-      .from("sessions")
-      .delete()
-      .eq("session_id", sessionId);
-
-    if (sessionError) {
-      throw sessionError;
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    return handleError(error as Error);
-  }
-}
-
-// PATCH handler for updating sessions
-export async function PATCH(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get("sessionId");
-    const body = await request.json();
-
-    if (!sessionId) {
-      return NextResponse.json(
-        { error: "Session ID is required" },
-        { status: 400 }
-      );
-    }
-
-    const updateSchema = z.object({
-      name: z.string().min(1).max(100).optional(),
-      locations: z.array(z.string()).optional(),
-    });
-
-    const parsed = updateSchema.safeParse(body);
-
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: parsed.error.errors[0].message },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from("sessions")
-      .update({
-        ...parsed.data,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("session_id", sessionId)
-      .select()
-      .single();
 
     if (error) {
       throw error;
