@@ -9,15 +9,24 @@ import {
   SessionDetailView,
   setSessionDetailView,
 } from "@/redux/sessionDetailSlice";
+import { getActiveSessionId } from "@/redux/itinerarySlice";
+import { useGetSessions } from "@/hooks/useSessions";
+import { useSupabase } from "@/contexts/SupabaseContext";
 
 export const SessionDetailPanel = () => {
   const currentView = useSelector(getCurrentSessionDetailView);
+  const activeSessionId = useSelector(getActiveSessionId);
+  const { user } = useSupabase();
+  const { data: sessions } = useGetSessions(user?.id ?? "");
+  const session = sessions?.find(
+    (session) => session.sessionId === activeSessionId
+  );
 
   const dispatch = useDispatch();
   return (
     <div className="flex-1 flex flex-col">
       <div className="h-14 border-b px-4 flex items-center">
-        <h2 className="font-semibold">Session details</h2>
+        <h2 className="font-semibold">{session?.name ?? "Session Details"}</h2>
       </div>
       <div className="p-4">
         <div className="flex gap-4 border-b pb-4">

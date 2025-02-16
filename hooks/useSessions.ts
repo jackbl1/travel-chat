@@ -86,16 +86,16 @@ export const useAddSession = () => {
   });
 };
 
-export const useUpdateSessionWithLocations = () => {
-  //const queryClient = useQueryClient();
+export const useUpdateSession = () => {
   return useMutation({
     mutationFn: async (payload: {
       sessionId: string;
-      locations: Array<{ lat: number; lng: number }>;
+      locations?: string[];
+      name?: string;
     }) => {
       return axios.patch(
         `${apiRoutes.session}/${payload.sessionId}`,
-        { locations: payload.locations },
+        { locations: payload.locations, name: payload.name },
         {
           headers: {
             "Content-Type": "application/json",

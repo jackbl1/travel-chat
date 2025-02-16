@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
+import { useChat, useGenerateSessionName } from "@/hooks/useChat";
 import { useDispatch, useSelector } from "react-redux";
 import {
   addLocation,
@@ -16,7 +17,7 @@ import {
 import {
   useAddSession,
   useGetSessions,
-  useUpdateSessionWithLocations,
+  useUpdateSession,
 } from "@/hooks/useSessions";
 import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
@@ -98,8 +99,9 @@ export default function ChatInterface() {
   );
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
-  const { mutateAsync: updateSessionLocations } =
-    useUpdateSessionWithLocations(); // const { addSession, deleteSession, addLocationsToSession } =
+  const { mutateAsync: updateSession } = useUpdateSession();
+  const chatMutation = useChat();
+  const generateNameMutation = useGenerateSessionName();
 
   const onAddSession = async (name: string = "New Session", userId: string) => {
     try {
@@ -149,7 +151,7 @@ export default function ChatInterface() {
     setError(false);
 
     try {
-      // 1. Create session if not already in active session
+      // 1. Create or get session ID
       let sessionId = activeSessionId;
       if (!sessionId) {
         const newSession = await onAddSession(
@@ -162,33 +164,52 @@ export default function ChatInterface() {
         }
       }
 
-      // 2. Add user message to database
-      await addMessageHelper(sessionId, user?.id ?? "", "user", messageContent);
+      // 2. Add user message and get AI response in parallel
+      const [data] = await Promise.all([
+        chatMutation.mutateAsync({ message: messageContent }),
+        addMessageHelper(sessionId, user?.id ?? "", "user", messageContent),
+      ]);
 
-      // 3. Get AI response
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: messageContent }),
-      });
-
-      if (!response.ok) throw new Error("API request failed");
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-
-      // 4. Update session with locations and add agent response
-      await Promise.all([
-        await updateSessionLocations({
+      // 3. Process AI response and update session
+      // Start all async operations in parallel
+      const operations = [
+        updateSession({
           sessionId,
           locations: data.locations,
         }),
         addMessageHelper(sessionId, user?.id ?? "", "agent", data.reply),
-      ]);
+      ];
+
+      // 4. Initiate session renaming in parallel if needed
+      const currentSession = sessions?.find((s) => s.sessionId === sessionId);
+      if (currentSession?.name.match(/^Session \d+$/)) {
+        generateNameMutation.mutate(
+          { sessionId },
+          {
+            onSuccess: async (nameResponse) => {
+              try {
+                await updateSession({
+                  sessionId,
+                  name: nameResponse.name,
+                });
+              } catch (error) {
+                console.error("Failed to update session name:", error);
+              }
+            },
+            onError: (error) => {
+              console.error("Failed to generate session name:", error);
+            },
+          }
+        );
+      }
+
+      // 5. Wait for critical operations to complete
+      await Promise.all(operations);
+      await refetchMessages();
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
     } finally {
-      await refetchMessages();
       setLoading(false);
     }
   };
