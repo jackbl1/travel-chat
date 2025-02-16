@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { formatMessageDate } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useChat, useGenerateSessionName } from "@/hooks/useChat";
@@ -68,7 +69,7 @@ const errorMessage: MessageInterface = {
   userId: "user1",
   role: "agent",
   content: "An error occurred while processing your request.",
-  createdAt: new Date().toLocaleTimeString(),
+  createdAt: new Date().toISOString(),
 };
 
 const getRandomDefaultMessage = (): MessageInterface => ({
@@ -80,7 +81,7 @@ const getRandomDefaultMessage = (): MessageInterface => ({
     defaultMessageContent[
       Math.floor(Math.random() * defaultMessageContent.length)
     ],
-  createdAt: new Date().toLocaleTimeString(),
+  createdAt: new Date().toISOString(),
 });
 
 export default function ChatInterface() {
@@ -94,9 +95,11 @@ export default function ChatInterface() {
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
-  const { data: messages, refetch: refetchMessages } = useGetMessages(
-    activeSessionId ?? ""
-  );
+  const {
+    data: messages,
+    refetch: refetchMessages,
+    isLoading: messagesLoading,
+  } = useGetMessages(activeSessionId);
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
@@ -117,7 +120,7 @@ export default function ChatInterface() {
     }
   };
 
-  // Helper function to add a message
+  // Helper function to add a message and immediately refetch
   const addMessageHelper = async (
     sessionId: string,
     userId: string,
@@ -131,11 +134,11 @@ export default function ChatInterface() {
         role,
         userId,
       });
+      // Immediately refetch messages to update the UI
+      await refetchMessages();
     } catch (e) {
       console.error("Error adding message:", e);
       setError(true);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -164,11 +167,9 @@ export default function ChatInterface() {
         }
       }
 
-      // 2. Add user message and get AI response in parallel
-      const [data] = await Promise.all([
-        chatMutation.mutateAsync({ message: messageContent }),
-        addMessageHelper(sessionId, user?.id ?? "", "user", messageContent),
-      ]);
+      // 2. Add user message first, then get AI response
+      await addMessageHelper(sessionId, user?.id ?? "", "user", messageContent);
+      const data = await chatMutation.mutateAsync({ message: messageContent });
 
       // 3. Process AI response and update session
       // Start all async operations in parallel
@@ -205,11 +206,12 @@ export default function ChatInterface() {
 
       // 5. Wait for critical operations to complete
       await Promise.all(operations);
-      await refetchMessages();
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
     } finally {
+      // Ensure we have the latest messages
+      await refetchMessages();
       setLoading(false);
     }
   };
@@ -225,87 +227,90 @@ export default function ChatInterface() {
     }
   };
 
+  if (messagesLoading)
+    return (
+      <div className="flex gap-2 max-w-[80%]">
+        <Image
+          src="/icon.webp"
+          alt="Icon"
+          className="h-6 w-6 rounded-full"
+          width={32}
+          height={32}
+        />
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Travel Chat</span>
+          </div>
+          <div className="p-3 bg-muted/50 rounded-lg">
+            <p className="text-sm whitespace-pre-wrap">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+
   return (
-    <div className="flex-1 flex flex-col h-screen">
+    <div className="flex-1 flex flex-col h-screen relative">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          <div className="flex gap-2 max-w-[80%]">
-            <Image
-              src="/icon.webp"
-              alt="Icon"
-              className="h-6 w-6 rounded-full"
-              width={32}
-              height={32}
-            />
+          {!messages ? (
+            <div className="flex gap-2 max-w-[80%]">
+              <Image
+                src="/icon.webp"
+                alt="Icon"
+                className="h-6 w-6 rounded-full"
+                width={32}
+                height={32}
+              />
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Travel Chat</span>
-                <span className="text-sm text-muted-foreground">
-                  {new Date().toLocaleString()}
-                </span>
-              </div>
-              <div className="p-3 bg-muted/50 rounded-lg">
-                <p className="text-sm whitespace-pre-wrap">
-                  {defaultMessage.content}
-                </p>
-              </div>
-              {
-                //TODO: Decide whether to show these buttons
-                /* {message.role === "agent" && (
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ThumbsUp className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ThumbsDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )} */
-              }
-            </div>
-          </div>
-
-          {messages?.map((message, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex gap-2 max-w-[80%]",
-                message.role === "user" && "ml-auto justify-end"
-              )}
-            >
-              {message.role === "agent" && (
-                <Image
-                  src="/icon.webp"
-                  alt="Icon"
-                  className="h-6 w-6 rounded-full"
-                  width={32}
-                  height={32}
-                />
-              )}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {message.role === "agent" ? "Travel Chat" : "User"}
-                  </span>
+                  <span className="text-sm font-medium">Travel Chat</span>
                   <span className="text-sm text-muted-foreground">
-                    {message.createdAt}
+                    {formatMessageDate(defaultMessage.createdAt)}
                   </span>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">
-                    {message.content}
+                    {defaultMessage.content}
                   </p>
                 </div>
-                {
-                  //TODO: Decide whether to show these buttons
-                  /* {message.role === "agent" && (
+              </div>
+            </div>
+          ) : (
+            messages?.map((message, index) => (
+              <div
+                key={index}
+                className={cn(
+                  "flex gap-2 max-w-[80%]",
+                  message.role === "user" && "ml-auto justify-end"
+                )}
+              >
+                {message.role === "agent" && (
+                  <Image
+                    src="/icon.webp"
+                    alt="Icon"
+                    className="h-6 w-6 rounded-full"
+                    width={32}
+                    height={32}
+                  />
+                )}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      {message.role === "agent" ? "Travel Chat" : "User"}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatMessageDate(message.createdAt)}
+                    </span>
+                  </div>
+                  <div className="p-3 bg-muted/50 rounded-lg">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {message.content}
+                    </p>
+                  </div>
+                  {
+                    //TODO: Decide whether to show these buttons
+                    /* {message.role === "agent" && (
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Copy className="h-4 w-4" />
@@ -321,10 +326,11 @@ export default function ChatInterface() {
                     </Button>
                   </div>
                 )} */
-                }
+                  }
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
           {loading && (
             <div className="flex gap-2 max-w-[80%]">
               <Image

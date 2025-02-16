@@ -8,24 +8,7 @@ export const useGetSessions = (userId?: string) => {
     queryKey: ["sessions", userId],
     queryFn: async (): Promise<Array<SessionInterface>> => {
       const response = await fetch(`${apiRoutes.session}?userId=${userId}`);
-      const data = await response.json();
-
-      if (!data) {
-        return [];
-      }
-
-      // Ensure data is an array
-      const sessionsArray = Array.isArray(data) ? data : data.sessions || [];
-
-      // Map the response data to match SessionInterface
-      return sessionsArray.map((session) => ({
-        sessionId: session.session_id,
-        userId: session.user_id,
-        name: session.name,
-        createdAt: session.created_at,
-        updatedAt: session.updated_at,
-        locations: session.locations || [],
-      }));
+      return await response.json();
     },
     enabled: !!userId,
   });

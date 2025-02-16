@@ -3,7 +3,7 @@ import { apiRoutes } from "../lib/api-routes";
 import { MessageInterface } from "@/lib/types";
 import axios from "axios";
 
-export const useGetMessages = (sessionId: string) => {
+export const useGetMessages = (sessionId?: string | null) => {
   return useQuery({
     queryKey: ["messages", sessionId],
     queryFn: async (): Promise<Array<MessageInterface>> => {

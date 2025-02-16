@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { NextResponse, NextRequest } from "next/server";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { transformKeys } from "../utils";
 
 // Environment validation
 const requireEnvVar = (name: string): string => {
@@ -98,7 +99,10 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json(data);
+    // Transform the data to camelCase before sending to frontend
+    const transformedData = transformKeys(data);
+
+    return NextResponse.json(transformedData);
   } catch (error) {
     return handleError(error as Error);
   }
