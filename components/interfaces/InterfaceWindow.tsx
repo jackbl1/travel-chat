@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import ChatInterface from "./ChatInterface";
-import MapInterface from "./MapInterface";
-import NewChatInterface from "./NewChatInterface";
+import { NewChatInterface } from "./NewChatInterface";
+import { ChatInterface } from "./ChatInterface";
+import { MapInterface } from "./MapInterface";
 import { PastTripInterface } from "./PastTripInterface";
 import { useSelector } from "react-redux";
 import { getCurrentView, View } from "@/redux/viewSlice";

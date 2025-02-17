@@ -17,11 +17,8 @@ import { useDispatch } from "react-redux";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { setActiveSessionId } from "@/redux/itinerarySlice";
 import { useSupabase } from "@/contexts/SupabaseContext";
-import {
-  useMessageOperations,
-  useSessionOperations,
-} from "@/hooks/usePostOperation";
-import { useGetSessions } from "@/hooks/useSessions";
+import { useAddSession, useGetSessions } from "@/hooks/useSessions";
+import { useAddMessage } from "@/hooks/useMessages";
 
 interface Action {
   id: string;
@@ -79,7 +76,7 @@ const allActions = [
   },
 ];
 
-function ActionSearchBar() {
+export const NewChatInterface = () => {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [isFocused, setIsFocused] = useState(false);
@@ -89,8 +86,8 @@ function ActionSearchBar() {
   const dispatch = useDispatch();
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id);
-  const { addSession } = useSessionOperations();
-  const { addMessage } = useMessageOperations();
+  const addSessionMutation = useAddSession();
+  const addMessageMutation = useAddMessage();
 
   useEffect(() => {
     if (!isFocused) {
@@ -113,17 +110,18 @@ function ActionSearchBar() {
   }, [debouncedQuery, isFocused]);
 
   const handleCreateSession = async (content: string) => {
+    if (!user?.id) return;
     try {
-      const newSession = await addSession({
-        name: `Session ${sessions?.length ?? 0 + 1}`,
-        userId: user?.id ?? "user1",
+      const newSession = await addSessionMutation.mutateAsync({
+        name: `Session ${(sessions?.length ?? 0) + 1}`,
+        userId: user.id,
       });
 
       if (newSession?.session_id) {
         dispatch(setActiveSessionId(newSession.session_id));
-        await addMessage({
+        await addMessageMutation.mutateAsync({
           sessionId: newSession.session_id,
-          userId: user?.id ?? "",
+          userId: user.id,
           role: "user",
           content: content,
         });
@@ -300,6 +298,4 @@ function ActionSearchBar() {
       </div>
     </div>
   );
-}
-
-export default ActionSearchBar;
+};

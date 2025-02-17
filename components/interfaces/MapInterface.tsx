@@ -12,7 +12,7 @@ import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Plus, PlaneTakeoff } from "lucide-react";
 
-export default function MapPage() {
+export const MapInterface = () => {
   const { user } = useSupabase();
   const dispatch = useDispatch();
   const activeSessionId = useSelector(getActiveSessionId);
@@ -62,4 +62,4 @@ export default function MapPage() {
       </div>
     </div>
   );
-}
+};

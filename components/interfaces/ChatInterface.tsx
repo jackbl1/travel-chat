@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,11 +10,7 @@ import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useChat, useGenerateSessionName } from "@/hooks/useChat";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  addLocation,
-  getActiveSessionId,
-  setActiveSessionId,
-} from "@/redux/itinerarySlice";
+import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
 import {
   useAddSession,
   useGetSessions,
@@ -22,13 +18,9 @@ import {
 } from "@/hooks/useSessions";
 import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
-import {
-  useMessageOperations,
-  useSessionOperations,
-} from "@/hooks/usePostOperation";
+import { UserIcon } from "lucide-react";
 
 const defaultMessageContent = [
-  // Natural Wonders
   "How about a stay in Costa Rica's lush jungle?",
   "The Himalayas are nice this time of year.",
   "What about a trip to the Mediterranean?",
@@ -84,14 +76,15 @@ const getRandomDefaultMessage = (): MessageInterface => ({
   createdAt: new Date().toISOString(),
 });
 
-export default function ChatInterface() {
+export const ChatInterface = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [defaultMessage] = useState(getRandomDefaultMessage);
+  const [firstMessageSent, setFirstMessageSent] = useState(false);
 
   const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id);
+  const { data: sessions, refetch: refetchSessions } = useGetSessions(user?.id);
   const activeSessionId = useSelector(getActiveSessionId);
   const dispatch = useDispatch();
 
@@ -99,6 +92,7 @@ export default function ChatInterface() {
     data: messages,
     refetch: refetchMessages,
     isLoading: messagesLoading,
+    isSuccess: messagesSuccess,
   } = useGetMessages(activeSessionId);
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
@@ -106,41 +100,11 @@ export default function ChatInterface() {
   const chatMutation = useChat();
   const generateNameMutation = useGenerateSessionName();
 
-  const onAddSession = async (name: string = "New Session", userId: string) => {
-    try {
-      const res = await addSessionMutation.mutateAsync({
-        name,
-        userId,
-      });
-      //const res = await addSession({ name, userId });
-      dispatch(setActiveSessionId(res.session_id));
-      return res;
-    } catch (e) {
-      console.log("Error adding session:", e);
+  useEffect(() => {
+    if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
+      setFirstMessageSent(true);
     }
-  };
-
-  // Helper function to add a message and immediately refetch
-  const addMessageHelper = async (
-    sessionId: string,
-    userId: string,
-    role: string,
-    content: string
-  ) => {
-    try {
-      await addMessageMutation.mutateAsync({
-        sessionId,
-        content,
-        role,
-        userId,
-      });
-      // Immediately refetch messages to update the UI
-      await refetchMessages();
-    } catch (e) {
-      console.error("Error adding message:", e);
-      setError(true);
-    }
-  };
+  }, [messagesSuccess, messages, firstMessageSent]);
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,6 +113,8 @@ export default function ChatInterface() {
     setUserInput("");
 
     if (!messageContent) return;
+    // TODO: Ask the user to sign in before sending message
+    if (!user?.id) return;
 
     setLoading(true);
     setError(false);
@@ -157,40 +123,69 @@ export default function ChatInterface() {
       // 1. Create or get session ID
       let sessionId = activeSessionId;
       if (!sessionId) {
-        const newSession = await onAddSession(
-          `Session ${(sessions?.length ?? 0) + 1}`,
-          user?.id ?? "user1"
-        );
-        sessionId = newSession?.session_id;
+        const newSession = await addSessionMutation.mutateAsync({
+          name: `Session ${(sessions?.length ?? 0) + 1}`,
+          userId: user.id,
+        });
+        sessionId = newSession?.sessionId;
         if (!sessionId) {
           throw new Error("Failed to create new session");
         }
+        dispatch(setActiveSessionId(newSession.sessionId));
+        await refetchSessions();
       }
 
       // 2. Add user message first, then get AI response
-      await addMessageHelper(sessionId, user?.id ?? "", "user", messageContent);
-      const data = await chatMutation.mutateAsync({ message: messageContent });
+      if (!firstMessageSent) {
+        await addMessageMutation.mutateAsync({
+          sessionId,
+          content: defaultMessage.content,
+          role: "agent",
+          userId: user.id,
+        });
+        setFirstMessageSent(true);
+      }
+      await addMessageMutation.mutateAsync({
+        sessionId,
+        content: messageContent,
+        role: "user",
+        userId: user.id,
+      });
 
       // 3. Process AI response and update session
       // Start all async operations in parallel
-      const operations = [
+      const data = await chatMutation.mutateAsync({ message: messageContent });
+
+      // Wait for both the session update and message addition
+      await Promise.all([
         updateSession({
           sessionId,
           locations: data.locations,
         }),
-        addMessageHelper(sessionId, user?.id ?? "", "agent", data.reply),
-      ];
+        addMessageMutation.mutateAsync({
+          sessionId,
+          content: data.reply,
+          role: "agent",
+          userId: user.id,
+        }),
+        refetchSessions(),
+      ]);
 
-      // 4. Initiate session renaming in parallel if needed
+      // Clear loading state after agent message is added
+      setLoading(false);
+
+      // 4. Handle session renaming if needed
+      // TODO: Fix so that first message can rename session
       const currentSession = sessions?.find((s) => s.sessionId === sessionId);
       if (currentSession?.name.match(/^Session \d+$/)) {
+        console.log("entering the generate name mutation?");
         generateNameMutation.mutate(
-          { sessionId },
+          { sessionId: sessionId },
           {
             onSuccess: async (nameResponse) => {
               try {
                 await updateSession({
-                  sessionId,
+                  sessionId: sessionId,
                   name: nameResponse.name,
                 });
               } catch (error) {
@@ -203,21 +198,17 @@ export default function ChatInterface() {
           }
         );
       }
-
-      // 5. Wait for critical operations to complete
-      await Promise.all(operations);
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
     } finally {
       // Ensure we have the latest messages
       await refetchMessages();
-      setLoading(false);
     }
   };
 
   // Prevent blank submissions and allow for multiline input
-  const handleEnter = (e) => {
+  const handleEnter = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && userInput) {
       if (!e.shiftKey && userInput) {
         handleSubmit(e);
@@ -293,6 +284,9 @@ export default function ChatInterface() {
                     width={32}
                     height={32}
                   />
+                )}
+                {message.role === "user" && (
+                  <UserIcon className="h-4 w-4 rounded-full" />
                 )}
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -395,4 +389,4 @@ export default function ChatInterface() {
       </div>
     </div>
   );
-}
+};

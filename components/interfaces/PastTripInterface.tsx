@@ -4,13 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useDeleteSession, useGetSessions } from "@/hooks/useSessions";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  PlaneTakeoff,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ArrowUpRight, PlaneTakeoff, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -79,7 +73,7 @@ export const PastTripInterface = () => {
   }
 
   return (
-    <div className="p-4">
+    <div className="p-4 w-full overflow-y-auto">
       <h1 className="text-2xl font-bold mb-4">Past Trips</h1>
       <ul className="grid gap-4">
         {sessions?.map((session) => (
@@ -88,7 +82,7 @@ export const PastTripInterface = () => {
             key={session.sessionId}
           >
             <div
-              className={`w-full rounded-lg shadow-md transition-transform transform hover:scale-[102%]
+              className={`w-auto rounded-lg shadow-md transition-transform transform hover:scale-[102%]
                 ${
                   session.sessionId == activeSessionId
                     ? "bg-gray-200 text-gray-700 ring-2 ring-gray-500"
@@ -100,40 +94,38 @@ export const PastTripInterface = () => {
             >
               <div
                 className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-500 rounded-lg cursor-pointer"
-                onClick={() => handleSessionClick(session.sessionId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setExpandedSessionId(
+                    expandedSessionId === session.sessionId
+                      ? null
+                      : session.sessionId
+                  );
+                }}
                 aria-label={`View session ${session.name}`}
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center gap-x-4">
                   <span className="font-medium">{session.name}</span>
                   <div className="flex items-center">
-                    <span className="text-sm text-gray-500 mr-4">
-                      {new Date(session.createdAt).toLocaleDateString()}
-                    </span>
                     <button
-                      className="p-1 rounded-full hover:bg-gray-400 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedSessionId(
-                          expandedSessionId === session.sessionId
-                            ? null
-                            : session.sessionId
-                        );
+                      className="p-1 rounded-md hover:bg-gray-400 transition-colors"
+                      onClick={() => {
+                        handleSessionClick(session.sessionId);
                       }}
                     >
-                      {expandedSessionId === session.sessionId ? (
-                        <ChevronUpIcon className="w-5 h-5" />
-                      ) : (
-                        <ChevronDownIcon className="w-5 h-5" />
-                      )}
+                      <ArrowUpRight className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
               </div>
               {expandedSessionId === session.sessionId && (
                 <div className="px-4 pb-4 border-t border-gray-400 mt-2 pt-2">
-                  <h2 className="text-md font-semibold mb-2">
+                  <h2 className="text-sm font-semibold mb-2">
                     Session Details
                   </h2>
+                  <span className="text-sm text-gray-500 mr-4">
+                    {new Date(session.createdAt).toLocaleDateString()}
+                  </span>
                   <p className="text-sm text-gray-600">
                     Locations: {session.locations?.map((loc) => loc).join(", ")}
                   </p>

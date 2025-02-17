@@ -143,7 +143,6 @@ export const LocationMap = ({
           const failures = results
             .filter((result) => !result.success)
             .map((result) => result.name!);
-          console.log(failures);
           setFailedLocations(failures);
           setGeocodedLocations(successfulResults.map((r) => r.location));
         })

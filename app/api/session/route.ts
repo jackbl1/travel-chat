@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json(data);
+    const transformedData = transformKeys(data);
+    return NextResponse.json(transformedData);
   } catch (error) {
     return handleError(error as Error);
   }
@@ -99,9 +100,7 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    // Transform the data to camelCase before sending to frontend
     const transformedData = transformKeys(data);
-
     return NextResponse.json(transformedData);
   } catch (error) {
     return handleError(error as Error);
