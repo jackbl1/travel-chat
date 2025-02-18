@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 export const PastTripInterface = () => {
   const activeSessionId = useSelector(getActiveSessionId);
@@ -82,7 +83,7 @@ export const PastTripInterface = () => {
             key={session.sessionId}
           >
             <div
-              className={`w-auto rounded-lg shadow-md transition-transform transform hover:scale-[102%]
+              className={`w-auto rounded-lg shadow-md transition-transform duration-200 transform hover:scale-[102%]
                 ${
                   session.sessionId == activeSessionId
                     ? "bg-gray-200 text-gray-700 ring-2 ring-gray-500"
@@ -96,6 +97,7 @@ export const PastTripInterface = () => {
                 className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-500 rounded-lg cursor-pointer"
                 onClick={(e) => {
                   e.stopPropagation();
+                  dispatch(setActiveSessionId(session.sessionId));
                   setExpandedSessionId(
                     expandedSessionId === session.sessionId
                       ? null
