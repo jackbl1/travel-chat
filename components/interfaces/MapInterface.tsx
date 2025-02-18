@@ -3,9 +3,7 @@
 import { LocationMap } from "@/components/LocationMap";
 import { useSelector } from "react-redux";
 import { getSelectedLocation } from "@/redux/mapSlice";
-import { getActiveSessionId } from "@/redux/itinerarySlice";
-import { useGetSessions } from "@/hooks/useSessions";
-import { useSupabase } from "@/contexts/SupabaseContext";
+import { getActiveSession } from "@/redux/sessionSlice";
 import { LocationType } from "@/lib/types";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useDispatch } from "react-redux";
@@ -13,14 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Plus, PlaneTakeoff } from "lucide-react";
 
 export const MapInterface = () => {
-  const { user } = useSupabase();
   const dispatch = useDispatch();
-  const activeSessionId = useSelector(getActiveSessionId);
   const selectedLocation = useSelector(getSelectedLocation);
-  const { data: sessions } = useGetSessions(user?.id);
-  const activeSession = sessions?.find(
-    (session) => session.sessionId === activeSessionId
-  );
+  const activeSession = useSelector(getActiveSession);
+
   const locations: LocationType[] =
     activeSession?.locations?.map((location) => {
       return {

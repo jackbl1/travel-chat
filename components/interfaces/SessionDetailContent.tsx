@@ -2,12 +2,10 @@
 
 import { useSelector, useDispatch } from "react-redux";
 import {
-  getCurrentSessionDetailView,
+  getActiveSession,
+  getSessionDetailView,
   SessionDetailView,
-} from "@/redux/sessionDetailSlice";
-import { getActiveSessionId } from "@/redux/itinerarySlice";
-import { useSupabase } from "@/contexts/SupabaseContext";
-import { useGetSessions } from "@/hooks/useSessions";
+} from "@/redux/sessionSlice";
 import { View, setCurrentView } from "@/redux/viewSlice";
 import { setSelectedLocation } from "@/redux/mapSlice";
 
@@ -22,13 +20,8 @@ const bgColors = [
 
 export const SessionDetailContent = () => {
   const dispatch = useDispatch();
-  const currentView = useSelector(getCurrentSessionDetailView);
-  const activeSessionId = useSelector(getActiveSessionId);
-  const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id ?? "");
-  const session = sessions?.find(
-    (session) => session.sessionId === activeSessionId
-  );
+  const currentView = useSelector(getSessionDetailView);
+  const session = useSelector(getActiveSession);
 
   const renderContent = () => {
     switch (currentView) {

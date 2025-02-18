@@ -10,8 +10,14 @@ import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useChat, useGenerateSessionName } from "@/hooks/useChat";
 import { useDispatch, useSelector } from "react-redux";
-import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
 import {
+  getActiveSession,
+  getActiveSessionId,
+  setActiveSession,
+  setActiveSessionId,
+} from "@/redux/sessionSlice";
+import {
+  useAddDetailsToSession,
   useAddSession,
   useGetSessions,
   useUpdateSession,
@@ -80,8 +86,10 @@ export const ChatInterface = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
-  const [defaultMessage] = useState(getRandomDefaultMessage);
   const [firstMessageSent, setFirstMessageSent] = useState(false);
+  const [localMessages, setLocalMessages] = useState<MessageInterface[]>([
+    getRandomDefaultMessage(),
+  ]);
 
   const { user } = useSupabase();
   const { data: sessions, refetch: refetchSessions } = useGetSessions(user?.id);
@@ -90,15 +98,52 @@ export const ChatInterface = () => {
 
   const {
     data: messages,
-    refetch: refetchMessages,
     isLoading: messagesLoading,
     isSuccess: messagesSuccess,
   } = useGetMessages(activeSessionId);
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
+  const { mutateAsync: addDetailsToSession } = useAddDetailsToSession();
   const chatMutation = useChat();
   const generateNameMutation = useGenerateSessionName();
+  const activeSession = useSelector(getActiveSession);
+
+  // useEffect(() => {
+  //   if (
+  //     activeSessionId &&
+  //     activeSession &&
+  //     activeSession?.name.match(/^Session \d+$/)
+  //   ) {
+  //     generateNameMutation.mutate(
+  //       { sessionId: activeSessionId },
+  //       {
+  //         onSuccess: async (nameResponse) => {
+  //           await updateSession({
+  //             sessionId: activeSessionId,
+  //             name: nameResponse.name,
+  //           });
+  //           refetchSessions();
+  //         },
+  //         onError: (error) => {
+  //           console.error("Failed to generate session name:", error);
+  //         },
+  //       }
+  //     );
+  //   }
+  // }, [
+  //   activeSessionId,
+  //   activeSession,
+  //   generateNameMutation,
+  //   updateSession,
+  //   refetchSessions,
+  // ]);
+
+  useEffect(() => {
+    if (messagesSuccess && messages) {
+      setLocalMessages(messages);
+    }
+  }, [messagesSuccess, messages]);
 
   useEffect(() => {
     if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
@@ -106,14 +151,12 @@ export const ChatInterface = () => {
     }
   }, [messagesSuccess, messages, firstMessageSent]);
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const messageContent = userInput.trim();
     setUserInput("");
 
     if (!messageContent) return;
-    // TODO: Ask the user to sign in before sending message
     if (!user?.id) return;
 
     setLoading(true);
@@ -132,78 +175,62 @@ export const ChatInterface = () => {
           throw new Error("Failed to create new session");
         }
         dispatch(setActiveSessionId(newSession.sessionId));
-        await refetchSessions();
       }
 
-      // 2. Add user message first, then get AI response
+      // 2. Add initial AI message if this is the first message
       if (!firstMessageSent) {
-        await addMessageMutation.mutateAsync({
+        const initialAiMessage = {
           sessionId,
-          content: defaultMessage.content,
+          content: localMessages[0].content,
           role: "agent",
           userId: user.id,
-        });
+          createdAt: new Date().toISOString(),
+          messageId: `temp-${Date.now()}`,
+        };
+        await addMessageMutation.mutateAsync(initialAiMessage);
         setFirstMessageSent(true);
       }
-      await addMessageMutation.mutateAsync({
+
+      // 3. Add user message
+      const userMessage = {
         sessionId,
         content: messageContent,
         role: "user",
         userId: user.id,
-      });
+        createdAt: new Date().toISOString(),
+        messageId: `temp-${Date.now()}`,
+      };
+      setLocalMessages((prev) => [...prev, userMessage]);
+      await addMessageMutation.mutateAsync(userMessage);
 
-      // 3. Process AI response and update session
-      // Start all async operations in parallel
+      // 4. Add AI response to local state
       const data = await chatMutation.mutateAsync({ message: messageContent });
+      const aiMessage = {
+        sessionId,
+        content: data.reply,
+        role: "agent",
+        userId: user.id,
+        createdAt: new Date().toISOString(),
+        messageId: `temp-${Date.now()}`,
+      };
+      setLocalMessages((prev) => [...prev, aiMessage]);
 
-      // Wait for both the session update and message addition
       await Promise.all([
-        updateSession({
+        addDetailsToSession({
           sessionId,
           locations: data.locations,
         }),
-        addMessageMutation.mutateAsync({
-          sessionId,
-          content: data.reply,
-          role: "agent",
-          userId: user.id,
-        }),
-        refetchSessions(),
+        addMessageMutation.mutateAsync(aiMessage),
       ]);
-
-      // Clear loading state after agent message is added
-      setLoading(false);
-
-      // 4. Handle session renaming if needed
-      // TODO: Fix so that first message can rename session
-      const currentSession = sessions?.find((s) => s.sessionId === sessionId);
-      if (currentSession?.name.match(/^Session \d+$/)) {
-        console.log("entering the generate name mutation?");
-        generateNameMutation.mutate(
-          { sessionId: sessionId },
-          {
-            onSuccess: async (nameResponse) => {
-              try {
-                await updateSession({
-                  sessionId: sessionId,
-                  name: nameResponse.name,
-                });
-              } catch (error) {
-                console.error("Failed to update session name:", error);
-              }
-            },
-            onError: (error) => {
-              console.error("Failed to generate session name:", error);
-            },
-          }
-        );
-      }
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
+      // Optionally add error message to local messages
+      setLocalMessages((prev) => [...prev, errorMessage]);
     } finally {
-      // Ensure we have the latest messages
-      await refetchMessages();
+      // Update the session with the latest details that the agent has generated
+      await refetchSessions();
+      setLoading(false);
     }
   };
 
@@ -243,68 +270,43 @@ export const ChatInterface = () => {
     <div className="flex-1 flex flex-col h-screen relative">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {!messages ? (
-            <div className="flex gap-2 max-w-[80%]">
-              <Image
-                src="/icon.webp"
-                alt="Icon"
-                className="h-6 w-6 rounded-full"
-                width={32}
-                height={32}
-              />
-
+          {localMessages.map((message, index) => (
+            <div
+              key={index}
+              className={cn(
+                "flex gap-2 max-w-[80%]",
+                message.role === "user" && "ml-auto justify-end"
+              )}
+            >
+              {message.role === "agent" && (
+                <Image
+                  src="/icon.webp"
+                  alt="Icon"
+                  className="h-6 w-6 rounded-full"
+                  width={32}
+                  height={32}
+                />
+              )}
+              {message.role === "user" && (
+                <UserIcon className="h-4 w-4 rounded-full" />
+              )}
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Travel Chat</span>
+                  <span className="text-sm font-medium">
+                    {message.role === "agent" ? "Travel Chat" : "User"}
+                  </span>
                   <span className="text-sm text-muted-foreground">
-                    {formatMessageDate(defaultMessage.createdAt)}
+                    {formatMessageDate(message.createdAt)}
                   </span>
                 </div>
                 <div className="p-3 bg-muted/50 rounded-lg">
                   <p className="text-sm whitespace-pre-wrap">
-                    {defaultMessage.content}
+                    {message.content}
                   </p>
                 </div>
-              </div>
-            </div>
-          ) : (
-            messages?.map((message, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "flex gap-2 max-w-[80%]",
-                  message.role === "user" && "ml-auto justify-end"
-                )}
-              >
-                {message.role === "agent" && (
-                  <Image
-                    src="/icon.webp"
-                    alt="Icon"
-                    className="h-6 w-6 rounded-full"
-                    width={32}
-                    height={32}
-                  />
-                )}
-                {message.role === "user" && (
-                  <UserIcon className="h-4 w-4 rounded-full" />
-                )}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                      {message.role === "agent" ? "Travel Chat" : "User"}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {formatMessageDate(message.createdAt)}
-                    </span>
-                  </div>
-                  <div className="p-3 bg-muted/50 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">
-                      {message.content}
-                    </p>
-                  </div>
-                  {
-                    //TODO: Decide whether to show these buttons
-                    /* {message.role === "agent" && (
+                {
+                  //TODO: Decide whether to show these buttons
+                  /* {message.role === "agent" && (
                   <div className="flex items-center gap-2">
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <Copy className="h-4 w-4" />
@@ -320,11 +322,10 @@ export const ChatInterface = () => {
                     </Button>
                   </div>
                 )} */
-                  }
-                </div>
+                }
               </div>
-            ))
-          )}
+            </div>
+          ))}
           {loading && (
             <div className="flex gap-2 max-w-[80%]">
               <Image

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useSelector, useDispatch } from "react-redux";
-import { getActiveSessionId, setActiveSessionId } from "@/redux/itinerarySlice";
+import { getActiveSessionId, setActiveSessionId } from "@/redux/sessionSlice";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useDeleteSession, useGetSessions } from "@/hooks/useSessions";
 import { ArrowUpRight, PlaneTakeoff, Plus, Trash2 } from "lucide-react";

@@ -15,7 +15,7 @@ import {
 import useDebounce from "../../hooks/useDebounce";
 import { useDispatch } from "react-redux";
 import { setCurrentView, View } from "@/redux/viewSlice";
-import { setActiveSessionId } from "@/redux/itinerarySlice";
+import { setActiveSessionId } from "@/redux/sessionSlice";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useAddSession, useGetSessions } from "@/hooks/useSessions";
 import { useAddMessage } from "@/hooks/useMessages";

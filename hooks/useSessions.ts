@@ -69,6 +69,27 @@ export const useAddSession = () => {
   });
 };
 
+export const useAddDetailsToSession = () => {
+  return useMutation({
+    mutationFn: async (payload: {
+      sessionId: string;
+      locations?: string[];
+    }) => {
+      return axios.post(
+        `${apiRoutes.session}/${payload.sessionId}`,
+        {
+          locations: payload.locations,
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    },
+  });
+};
+
 export const useUpdateSession = () => {
   return useMutation({
     mutationFn: async (payload: {

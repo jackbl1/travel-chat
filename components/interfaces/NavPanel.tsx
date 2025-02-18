@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentView, setCurrentView } from "@/redux/viewSlice";
@@ -14,9 +14,13 @@ import {
   MapPinned,
   ClipboardList,
 } from "lucide-react";
-import { useSupabase } from "@/contexts/SupabaseContext";
+import {
+  getActiveSession,
+  getActiveSessionId,
+  setActiveSession,
+} from "@/redux/sessionSlice";
 import { useGetSessions } from "@/hooks/useSessions";
-import { getActiveSessionId } from "@/redux/itinerarySlice";
+import { useSupabase } from "@/contexts/SupabaseContext";
 
 interface NavButton {
   label: string;
@@ -29,12 +33,21 @@ export const NavPanel = () => {
   const dispatch = useDispatch();
   const currentView = useSelector(getCurrentView);
   const activeSessionId = useSelector(getActiveSessionId);
+  const activeSession = useSelector(getActiveSession);
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id);
 
-  const activeSession = sessions?.find(
-    (session) => session.sessionId === activeSessionId
-  );
+  // When active session ID changes, update the active session
+  useEffect(() => {
+    if (activeSessionId) {
+      const session = sessions?.find(
+        (session) => session.sessionId === activeSessionId
+      );
+      if (session) {
+        dispatch(setActiveSession(session));
+      }
+    }
+  }, [activeSessionId]);
 
   const getNavButtons = () => {
     const buttons: NavButton[] = [

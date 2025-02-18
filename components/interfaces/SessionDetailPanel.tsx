@@ -5,22 +5,15 @@ import { Button } from "../ui/button";
 import { SessionDetailContent } from "./SessionDetailContent";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  getCurrentSessionDetailView,
+  getActiveSession,
+  getSessionDetailView,
   SessionDetailView,
   setSessionDetailView,
-} from "@/redux/sessionDetailSlice";
-import { getActiveSessionId } from "@/redux/itinerarySlice";
-import { useGetSessions } from "@/hooks/useSessions";
-import { useSupabase } from "@/contexts/SupabaseContext";
+} from "@/redux/sessionSlice";
 
 export const SessionDetailPanel = () => {
-  const currentView = useSelector(getCurrentSessionDetailView);
-  const activeSessionId = useSelector(getActiveSessionId);
-  const { user } = useSupabase();
-  const { data: sessions } = useGetSessions(user?.id ?? "");
-  const session = sessions?.find(
-    (session) => session.sessionId === activeSessionId
-  );
+  const currentView = useSelector(getSessionDetailView);
+  const session = useSelector(getActiveSession);
 
   const dispatch = useDispatch();
   return (
