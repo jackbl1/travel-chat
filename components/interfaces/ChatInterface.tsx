@@ -204,7 +204,10 @@ export const ChatInterface = () => {
       await addMessageMutation.mutateAsync(userMessage);
 
       // 4. Add AI response to local state
-      const data = await chatMutation.mutateAsync({ message: messageContent });
+      const data = await chatMutation.mutateAsync({
+        sessionId,
+        message: messageContent,
+      });
       const aiMessage = {
         sessionId,
         content: data.reply,

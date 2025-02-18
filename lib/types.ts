@@ -18,6 +18,15 @@ export type SessionInterface = {
   locations?: string[];
 };
 
+export type SessionInterfaceDB = {
+  session_id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  locations?: string[];
+};
+
 export type MessageInterface = {
   messageId: string;
   content: string;
@@ -25,4 +34,13 @@ export type MessageInterface = {
   userId: string;
   sessionId: string;
   createdAt: string;
+};
+
+export type MessageInterfaceDB = {
+  message_id: string;
+  content: string;
+  role: string;
+  user_id: string;
+  session_id: string;
+  created_at: string;
 };

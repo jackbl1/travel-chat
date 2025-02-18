@@ -2,18 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from "uuid";
 import { z } from "zod";
-import { transformKeys } from "../utils";
+import { requireEnvVar, transformKeys } from "../utils";
 
-// Environment validation
-const requireEnvVar = (name: string): string => {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-};
-
-// Supabase client initialization
+// Supabase client initializations
 const supabase = createClient(
   requireEnvVar("NEXT_PUBLIC_SUPABASE_URL"),
   requireEnvVar("NEXT_PUBLIC_SUPABASE_KEY")

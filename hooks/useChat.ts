@@ -13,11 +13,13 @@ interface SessionNameResponse {
 export const useChat = () => {
   return useMutation({
     mutationFn: async ({
+      sessionId,
       message,
     }: {
+      sessionId: string;
       message: string;
     }): Promise<ChatResponse> => {
-      const response = await axios.post("/api/chat", { message });
+      const response = await axios.post("/api/chat", { sessionId, message });
       return response.data;
     },
   });
