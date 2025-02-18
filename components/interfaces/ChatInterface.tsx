@@ -87,6 +87,7 @@ export const ChatInterface = () => {
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [firstMessageSent, setFirstMessageSent] = useState(false);
+  const [startAnimation, setStartAnimation] = useState(false);
   const [localMessages, setLocalMessages] = useState<MessageInterface[]>([
     getRandomDefaultMessage(),
   ]);
@@ -142,6 +143,9 @@ export const ChatInterface = () => {
   useEffect(() => {
     if (messagesSuccess && messages) {
       setLocalMessages(messages);
+      setStartAnimation(false);
+      // Start the animation sequence after messages are loaded
+      setTimeout(() => setStartAnimation(true), 100);
     }
   }, [messagesSuccess, messages]);
 
@@ -250,22 +254,26 @@ export const ChatInterface = () => {
 
   if (messagesLoading)
     return (
-      <div className="flex gap-2 max-w-[80%]">
-        <Image
-          src="/icon.webp"
-          alt="Icon"
-          className="h-6 w-6 rounded-full"
-          width={32}
-          height={32}
-        />
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Travel Chat</span>
+      <div className="flex-1 flex flex-col h-screen relative">
+        <ScrollArea className="flex-1 p-4 overflow-y-auto">
+          <div className="flex gap-2 max-w-[80%]">
+            <Image
+              src="/icon.webp"
+              alt="Icon"
+              className="h-6 w-6 rounded-full"
+              width={32}
+              height={32}
+            />
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Travel Chat</span>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm whitespace-pre-wrap">Loading...</p>
+              </div>
+            </div>
           </div>
-          <div className="p-3 bg-muted/50 rounded-lg">
-            <p className="text-sm whitespace-pre-wrap">Loading...</p>
-          </div>
-        </div>
+        </ScrollArea>
       </div>
     );
 
@@ -277,9 +285,16 @@ export const ChatInterface = () => {
             <div
               key={index}
               className={cn(
-                "flex gap-2 max-w-[80%]",
+                "flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out",
                 message.role === "user" && "ml-auto justify-end"
               )}
+              style={{
+                opacity: startAnimation ? 1 : 0,
+                transform: startAnimation
+                  ? "translateY(0)"
+                  : "translateY(20px)",
+                transitionDelay: `${index * 200}ms`,
+              }}
             >
               {message.role === "agent" && (
                 <Image
@@ -330,7 +345,13 @@ export const ChatInterface = () => {
             </div>
           ))}
           {loading && (
-            <div className="flex gap-2 max-w-[80%]">
+            <div
+              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
+              style={{
+                opacity: 1,
+                transform: "translateY(0)",
+              }}
+            >
               <Image
                 src="/icon.webp"
                 alt="Icon"
@@ -349,7 +370,13 @@ export const ChatInterface = () => {
             </div>
           )}
           {error && (
-            <div className="flex gap-2 max-w-[80%]">
+            <div
+              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
+              style={{
+                opacity: 1,
+                transform: "translateY(0)",
+              }}
+            >
               <Image
                 src="/icon.webp"
                 alt="Icon"
