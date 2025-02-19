@@ -2,7 +2,7 @@
 
 import { useSelector, useDispatch } from "react-redux";
 import {
-  getActiveSession,
+  getActiveSessionLocations,
   getSessionDetailView,
   SessionDetailView,
 } from "@/redux/sessionSlice";
@@ -21,7 +21,7 @@ const bgColors = [
 export const SessionDetailContent = () => {
   const dispatch = useDispatch();
   const currentView = useSelector(getSessionDetailView);
-  const session = useSelector(getActiveSession);
+  const activeSessionLocations = useSelector(getActiveSessionLocations);
 
   const renderContent = () => {
     switch (currentView) {
@@ -29,7 +29,7 @@ export const SessionDetailContent = () => {
         return (
           <div className="p-4">
             <div className="space-y-2">
-              {session?.locations?.map((location, index) => {
+              {activeSessionLocations?.map((location, index) => {
                 return (
                   <div
                     key={index}
@@ -47,7 +47,8 @@ export const SessionDetailContent = () => {
                   </div>
                 );
               })}
-              {(!session?.locations || session.locations.length === 0) && (
+              {(!activeSessionLocations ||
+                activeSessionLocations.length === 0) && (
                 <div className="text-sm text-muted-foreground italic">
                   No locations added yet
                 </div>

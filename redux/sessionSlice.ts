@@ -1,4 +1,3 @@
-import { SessionInterface } from "@/lib/types";
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export enum SessionDetailView {
@@ -9,13 +8,15 @@ export enum SessionDetailView {
 
 interface SessionState {
   activeSessionId: string | null;
-  activeSession: SessionInterface | null;
+  activeSessionName: string | null;
+  activeSessionLocations: string[] | null;
   sessionDetailView: SessionDetailView;
 }
 
 const initialState: SessionState = {
   activeSessionId: null,
-  activeSession: null,
+  activeSessionName: null,
+  activeSessionLocations: null,
   sessionDetailView: SessionDetailView.Locations,
 };
 
@@ -26,8 +27,11 @@ const sessionSlice = createSlice({
     setActiveSessionId(state, action: PayloadAction<string | null>) {
       state.activeSessionId = action.payload;
     },
-    setActiveSession(state, action: PayloadAction<SessionInterface | null>) {
-      state.activeSession = action.payload;
+    setActiveSessionName(state, action: PayloadAction<string | null>) {
+      state.activeSessionName = action.payload;
+    },
+    setActiveSessionLocations(state, action: PayloadAction<string[] | null>) {
+      state.activeSessionLocations = action.payload;
     },
     setSessionDetailView(state, action: PayloadAction<SessionDetailView>) {
       state.sessionDetailView = action.payload;
@@ -39,14 +43,22 @@ export const getActiveSessionId = (state: { session: SessionState }) => {
   return state.session.activeSessionId;
 };
 
-export const getActiveSession = (state: { session: SessionState }) => {
-  return state.session.activeSession;
+export const getActiveSessionName = (state: { session: SessionState }) => {
+  return state.session.activeSessionName;
+};
+
+export const getActiveSessionLocations = (state: { session: SessionState }) => {
+  return state.session.activeSessionLocations;
 };
 
 export const getSessionDetailView = (state: { session: SessionState }) => {
   return state.session.sessionDetailView;
 };
 
-export const { setActiveSessionId, setActiveSession, setSessionDetailView } =
-  sessionSlice.actions;
+export const {
+  setActiveSessionId,
+  setActiveSessionName,
+  setActiveSessionLocations,
+  setSessionDetailView,
+} = sessionSlice.actions;
 export default sessionSlice.reducer;

@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { SessionDetailContent } from "./SessionDetailContent";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  getActiveSession,
+  getActiveSessionName,
   getSessionDetailView,
   SessionDetailView,
   setSessionDetailView,
@@ -13,13 +13,15 @@ import {
 
 export const SessionDetailPanel = () => {
   const currentView = useSelector(getSessionDetailView);
-  const session = useSelector(getActiveSession);
+  const activeSessionName = useSelector(getActiveSessionName);
 
   const dispatch = useDispatch();
   return (
     <div className="flex-1 flex flex-col">
       <div className="h-14 border-b px-4 flex items-center">
-        <h2 className="font-semibold">{session?.name ?? "Session Details"}</h2>
+        <h2 className="font-semibold">
+          {activeSessionName ?? "Session Details"}
+        </h2>
       </div>
       <div className="p-4">
         <div className="flex gap-4 border-b pb-4">

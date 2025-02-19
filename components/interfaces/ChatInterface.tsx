@@ -11,9 +11,9 @@ import { useSupabase } from "@/contexts/SupabaseContext";
 import { useChat, useGenerateSessionName } from "@/hooks/useChat";
 import { useDispatch, useSelector } from "react-redux";
 import {
-  getActiveSession,
+  getActiveSessionName,
+  getActiveSessionLocations,
   getActiveSessionId,
-  setActiveSession,
   setActiveSessionId,
 } from "@/redux/sessionSlice";
 import {
@@ -87,7 +87,7 @@ export const ChatInterface = () => {
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [firstMessageSent, setFirstMessageSent] = useState(false);
-  const [startAnimation, setStartAnimation] = useState(false);
+  const [startAnimation, setStartAnimation] = useState(true);
   const [localMessages, setLocalMessages] = useState<MessageInterface[]>([
     getRandomDefaultMessage(),
   ]);
@@ -108,7 +108,7 @@ export const ChatInterface = () => {
   const { mutateAsync: addDetailsToSession } = useAddDetailsToSession();
   const chatMutation = useChat();
   const generateNameMutation = useGenerateSessionName();
-  const activeSession = useSelector(getActiveSession);
+  const activeSessionName = useSelector(getActiveSessionName);
 
   // useEffect(() => {
   //   if (
@@ -141,17 +141,12 @@ export const ChatInterface = () => {
   // ]);
 
   useEffect(() => {
-    if (messagesSuccess && messages) {
+    if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
+      setFirstMessageSent(true);
       setLocalMessages(messages);
       setStartAnimation(false);
       // Start the animation sequence after messages are loaded
       setTimeout(() => setStartAnimation(true), 100);
-    }
-  }, [messagesSuccess, messages]);
-
-  useEffect(() => {
-    if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
-      setFirstMessageSent(true);
     }
   }, [messagesSuccess, messages, firstMessageSent]);
 
@@ -221,6 +216,7 @@ export const ChatInterface = () => {
         messageId: `temp-${Date.now()}`,
       };
       setLocalMessages((prev) => [...prev, aiMessage]);
+      setLoading(false);
 
       await Promise.all([
         addDetailsToSession({
@@ -237,7 +233,6 @@ export const ChatInterface = () => {
     } finally {
       // Update the session with the latest details that the agent has generated
       await refetchSessions();
-      setLoading(false);
     }
   };
 

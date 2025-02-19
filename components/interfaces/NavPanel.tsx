@@ -15,9 +15,11 @@ import {
   ClipboardList,
 } from "lucide-react";
 import {
-  getActiveSession,
+  getActiveSessionName,
+  getActiveSessionLocations,
   getActiveSessionId,
-  setActiveSession,
+  setActiveSessionName,
+  setActiveSessionLocations,
 } from "@/redux/sessionSlice";
 import { useGetSessions } from "@/hooks/useSessions";
 import { useSupabase } from "@/contexts/SupabaseContext";
@@ -33,21 +35,38 @@ export const NavPanel = () => {
   const dispatch = useDispatch();
   const currentView = useSelector(getCurrentView);
   const activeSessionId = useSelector(getActiveSessionId);
-  const activeSession = useSelector(getActiveSession);
+  const activeSessionName = useSelector(getActiveSessionName);
+  const activeSessionLocations = useSelector(getActiveSessionLocations);
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id);
 
   // When active session ID changes, update the active session
   useEffect(() => {
-    if (activeSessionId) {
-      const session = sessions?.find(
-        (session) => session.sessionId === activeSessionId
-      );
-      if (session) {
-        dispatch(setActiveSession(session));
-      }
+    // Reset active session details if no active session
+    if (!activeSessionId) {
+      dispatch(setActiveSessionName(null));
+      dispatch(setActiveSessionLocations(null));
+      return;
     }
-  }, [activeSessionId]);
+
+    const activeSession = sessions?.find(
+      (session) => session.sessionId === activeSessionId
+    );
+    if (
+      activeSession &&
+      (activeSessionName !== activeSession.name ||
+        activeSessionLocations !== activeSession.locations)
+    ) {
+      dispatch(setActiveSessionName(activeSession.name));
+      dispatch(setActiveSessionLocations(activeSession.locations ?? null));
+    }
+  }, [
+    activeSessionId,
+    sessions,
+    dispatch,
+    activeSessionName,
+    activeSessionLocations,
+  ]);
 
   const getNavButtons = () => {
     const buttons: NavButton[] = [
@@ -71,7 +90,7 @@ export const NavPanel = () => {
         view: View.Map,
         icon: MapPinned,
         disabled:
-          activeSession?.locations && activeSession.locations.length === 0,
+          !!activeSessionLocations && activeSessionLocations.length === 0,
       },
       {
         label: "Past Trips",

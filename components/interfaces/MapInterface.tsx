@@ -3,7 +3,7 @@
 import { LocationMap } from "@/components/LocationMap";
 import { useSelector } from "react-redux";
 import { getSelectedLocation } from "@/redux/mapSlice";
-import { getActiveSession } from "@/redux/sessionSlice";
+import { getActiveSessionLocations } from "@/redux/sessionSlice";
 import { LocationType } from "@/lib/types";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useDispatch } from "react-redux";
@@ -13,10 +13,10 @@ import { Plus, PlaneTakeoff } from "lucide-react";
 export const MapInterface = () => {
   const dispatch = useDispatch();
   const selectedLocation = useSelector(getSelectedLocation);
-  const activeSession = useSelector(getActiveSession);
+  const activeSessionLocations = useSelector(getActiveSessionLocations);
 
   const locations: LocationType[] =
-    activeSession?.locations?.map((location) => {
+    activeSessionLocations?.map((location) => {
       return {
         name: location,
       };
