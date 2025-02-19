@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "react-query";
 import { apiRoutes } from "../lib/api-routes";
 import { SessionInterface } from "@/lib/types";
 import axios from "axios";
+import { useSupabase } from "@/contexts/SupabaseContext";
 
 export const useGetSessions = (userId?: string) => {
   return useQuery({
@@ -91,6 +92,9 @@ export const useAddDetailsToSession = () => {
 };
 
 export const useUpdateSession = () => {
+  const queryClient = useQueryClient();
+  const { user } = useSupabase();
+
   return useMutation({
     mutationFn: async (payload: {
       sessionId: string;
@@ -106,6 +110,36 @@ export const useUpdateSession = () => {
           },
         }
       );
+    },
+    onMutate: async (payload) => {
+      await queryClient.cancelQueries(["sessions", user?.id]);
+
+      const previousSessions = queryClient.getQueryData<
+        Array<SessionInterface>
+      >(["sessions", user?.id]);
+
+      queryClient.setQueryData<Array<SessionInterface>>(
+        ["sessions", user?.id],
+        (oldSessions) =>
+          oldSessions?.map((session) =>
+            session.sessionId === payload.sessionId
+              ? { ...session, ...payload }
+              : session
+          ) || []
+      );
+
+      return { previousSessions };
+    },
+    onError: (error, payload, context) => {
+      if (context?.previousSessions) {
+        queryClient.setQueryData<Array<SessionInterface>>(
+          ["sessions", user?.id],
+          context.previousSessions
+        );
+      }
+    },
+    onSettled: (_, __, payload) => {
+      queryClient.invalidateQueries(["sessions", user?.id]);
     },
   });
 };
