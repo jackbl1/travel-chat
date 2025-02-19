@@ -88,9 +88,9 @@ export const ChatInterface = () => {
   const [userInput, setUserInput] = useState("");
   const [firstMessageSent, setFirstMessageSent] = useState(false);
   const [startAnimation, setStartAnimation] = useState(true);
-  const [localMessages, setLocalMessages] = useState<MessageInterface[]>([
-    getRandomDefaultMessage(),
-  ]);
+  const [defaultMessage] = useState<MessageInterface>(
+    getRandomDefaultMessage()
+  );
 
   const { user } = useSupabase();
   const { data: sessions, refetch: refetchSessions } = useGetSessions(user?.id);
@@ -143,7 +143,7 @@ export const ChatInterface = () => {
   useEffect(() => {
     if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
       setFirstMessageSent(true);
-      setLocalMessages(messages);
+      //setLocalMessages(messages);
       setStartAnimation(false);
       // Start the animation sequence after messages are loaded
       setTimeout(() => setStartAnimation(true), 100);
@@ -180,7 +180,7 @@ export const ChatInterface = () => {
       if (!firstMessageSent) {
         const initialAiMessage = {
           sessionId,
-          content: localMessages[0].content,
+          content: defaultMessage.content,
           role: "agent",
           userId: user.id,
           createdAt: new Date().toISOString(),
@@ -199,7 +199,6 @@ export const ChatInterface = () => {
         createdAt: new Date().toISOString(),
         messageId: `temp-${Date.now()}`,
       };
-      setLocalMessages((prev) => [...prev, userMessage]);
       await addMessageMutation.mutateAsync(userMessage);
 
       // 4. Add AI response to local state
@@ -215,7 +214,6 @@ export const ChatInterface = () => {
         createdAt: new Date().toISOString(),
         messageId: `temp-${Date.now()}`,
       };
-      setLocalMessages((prev) => [...prev, aiMessage]);
       setLoading(false);
 
       await Promise.all([
@@ -228,8 +226,6 @@ export const ChatInterface = () => {
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
-      // Optionally add error message to local messages
-      setLocalMessages((prev) => [...prev, errorMessage]);
     } finally {
       // Update the session with the latest details that the agent has generated
       await refetchSessions();
@@ -276,7 +272,37 @@ export const ChatInterface = () => {
     <div className="flex-1 flex flex-col h-screen relative">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {localMessages.map((message, index) => (
+          {!firstMessageSent && (
+            <div
+              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
+              style={{
+                opacity: 1,
+                transform: "translateY(0)",
+              }}
+            >
+              <Image
+                src="/icon.webp"
+                alt="Icon"
+                className="h-6 w-6 rounded-full"
+                width={32}
+                height={32}
+              />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Travel Chat</span>
+                  <span className="text-sm text-muted-foreground">
+                    {formatMessageDate(defaultMessage.createdAt)}
+                  </span>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">
+                    {defaultMessage.content}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {messages?.map((message, index) => (
             <div
               key={index}
               className={cn(
