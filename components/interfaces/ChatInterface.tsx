@@ -4,8 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
-import { formatMessageDate } from "@/lib/utils";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useChat, useGenerateSessionName } from "@/hooks/useChat";
@@ -23,51 +21,8 @@ import {
 } from "@/hooks/useSessions";
 import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
-import { UserIcon } from "lucide-react";
-
-const defaultMessageContent = [
-  "How about a stay in Costa Rica's lush jungle?",
-  "The Himalayas are nice this time of year.",
-  "What about a trip to the Mediterranean?",
-  "The Galapagos are full of unique wildlife.",
-  "The Appalachians hide lovely mountain towns.",
-  "Iceland's northern lights are simply magical.",
-  "The Great Barrier Reef is calling your name.",
-  "Explore the mysteries of the Amazon rainforest.",
-  "Experience the ancient wonders of Kyoto.",
-  "Paris is always a good idea, isn't it?",
-  "Morocco's markets are a feast for the senses.",
-  "Discover the hidden gems of old Havana.",
-  "Walk the cobblestone streets of Prague.",
-  "Explore the temples of Angkor Wat.",
-  "The markets of Istanbul await your visit, my friend.",
-  "Feel the rhythm of Rio de Janeiro.",
-  "New Zealand's fjords are an adventurer's dream.",
-  "Trek through Patagonia's untamed wilderness.",
-  "Safari through Tanzania's Serengeti Plains.",
-  "Dive into the crystal waters of the Maldives.",
-  "Hike the breathtaking trails of Banff.",
-  "Experience the majesty of the Norwegian fjords.",
-  "Discover the hidden beaches of Thailand.",
-  "Explore Vietnam's stunning Ha Long Bay.",
-  "Find tranquility in Bhutan's mountain monasteries.",
-  "Wander through Croatia's lavender fields.",
-  "Discover the quiet beauty of Slovenia's lakes.",
-  "Experience the magic of Myanmar's temples.",
-  "Explore Colombia's coffee country.",
-  "Trek through Nepal's remote villages.",
-  "Find peace in Tuscany's rolling hills.",
-  "Discover the wild beauty of Scotland's Highlands.",
-];
-
-const errorMessage: MessageInterface = {
-  messageId: "error",
-  sessionId: "session1",
-  userId: "user1",
-  role: "agent",
-  content: "An error occurred while processing your request.",
-  createdAt: new Date().toISOString(),
-};
+import { ChatMessages, ErrorMessage, LoadingMessage } from "./ChatMessages";
+import { defaultMessageContent } from "@/lib/constants";
 
 const getRandomDefaultMessage = (): MessageInterface => ({
   messageId: "default",
@@ -282,151 +237,14 @@ export const ChatInterface = () => {
     <div className="flex-1 flex flex-col h-screen relative">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4">
-          {!firstMessageSent && (
-            <div
-              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
-              style={{
-                opacity: 1,
-                transform: "translateY(0)",
-              }}
-            >
-              <Image
-                src="/icon.webp"
-                alt="Icon"
-                className="h-6 w-6 rounded-full"
-                width={32}
-                height={32}
-              />
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Travel Chat</span>
-                  <span className="text-sm text-muted-foreground">
-                    {formatMessageDate(defaultMessage.createdAt)}
-                  </span>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {defaultMessage.content}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-          {messages?.map((message, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out",
-                message.role === "user" && "ml-auto justify-end"
-              )}
-              style={{
-                opacity: startAnimation ? 1 : 0,
-                transform: startAnimation
-                  ? "translateY(0)"
-                  : "translateY(20px)",
-                transitionDelay: `${index * 200}ms`,
-              }}
-            >
-              {message.role === "agent" && (
-                <Image
-                  src="/icon.webp"
-                  alt="Icon"
-                  className="h-6 w-6 rounded-full"
-                  width={32}
-                  height={32}
-                />
-              )}
-              {message.role === "user" && (
-                <UserIcon className="h-4 w-4 rounded-full" />
-              )}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">
-                    {message.role === "agent" ? "Travel Chat" : "User"}
-                  </span>
-                  <span className="text-sm text-muted-foreground">
-                    {formatMessageDate(message.createdAt)}
-                  </span>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {message.content}
-                  </p>
-                </div>
-                {
-                  //TODO: Decide whether to show these buttons
-                  /* {message.role === "agent" && (
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ThumbsUp className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <ThumbsDown className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )} */
-                }
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div
-              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
-              style={{
-                opacity: 1,
-                transform: "translateY(0)",
-              }}
-            >
-              <Image
-                src="/icon.webp"
-                alt="Icon"
-                className="h-6 w-6 rounded-full"
-                width={32}
-                height={32}
-              />
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Travel Chat</span>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">Generating...</p>
-                </div>
-              </div>
-            </div>
-          )}
-          {error && (
-            <div
-              className="flex gap-2 max-w-[80%] transition-all duration-500 ease-in-out"
-              style={{
-                opacity: 1,
-                transform: "translateY(0)",
-              }}
-            >
-              <Image
-                src="/icon.webp"
-                alt="Icon"
-                className="h-6 w-6 rounded-full"
-                width={32}
-                height={32}
-              />
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">Travel Chat</span>
-                </div>
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-sm whitespace-pre-wrap">
-                    {errorMessage.content}
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+          <ChatMessages
+            firstMessageSent={firstMessageSent}
+            startAnimation={startAnimation}
+            defaultMessage={defaultMessage}
+            messages={messages ?? []}
+          />
+          {loading && <LoadingMessage />}
+          {error && <ErrorMessage />}
         </div>
       </ScrollArea>
       <div className="p-4 border-t">
