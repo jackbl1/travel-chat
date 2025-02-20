@@ -36,6 +36,7 @@ const sessionSlice = createSlice({
     setSessionDetailView(state, action: PayloadAction<SessionDetailView>) {
       state.sessionDetailView = action.payload;
     },
+    resetSession: () => initialState,
   },
 });
 
@@ -60,5 +61,6 @@ export const {
   setActiveSessionName,
   setActiveSessionLocations,
   setSessionDetailView,
+  resetSession,
 } = sessionSlice.actions;
 export default sessionSlice.reducer;

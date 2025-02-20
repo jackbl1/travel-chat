@@ -16,9 +16,11 @@ export const mapSlice = createSlice({
     setSelectedLocation: (state, action: PayloadAction<string | null>) => {
       state.selectedLocation = action.payload;
     },
+    resetMap: () => initialState,
   },
 });
 
-export const { setSelectedLocation } = mapSlice.actions;
-export const getSelectedLocation = (state: RootState) => state.map.selectedLocation;
+export const { setSelectedLocation, resetMap } = mapSlice.actions;
+export const getSelectedLocation = (state: RootState) =>
+  state.map.selectedLocation;
 export default mapSlice.reducer;

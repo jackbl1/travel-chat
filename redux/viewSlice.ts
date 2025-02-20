@@ -23,10 +23,11 @@ const viewSlice = createSlice({
     setCurrentView(state, action: PayloadAction<View>) {
       state.currentView = action.payload;
     },
+    resetView: () => initialState,
   },
 });
 
-export const { setCurrentView } = viewSlice.actions;
+export const { setCurrentView, resetView } = viewSlice.actions;
 
 export const getCurrentView = (state: { view: ViewState }) => {
   return state.view.currentView;

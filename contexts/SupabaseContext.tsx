@@ -32,15 +32,30 @@ export const SupabaseProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   useEffect(() => {
-    const setUserInfo = async () => {
-      if (supabaseClient) {
+    if (supabaseClient) {
+      const setUserInfo = async () => {
         const {
           data: { user },
         } = await supabaseClient.auth.getUser();
         setUser(user);
-      }
-    };
-    setUserInfo();
+      };
+      setUserInfo();
+
+      // TODO: figure out why this auth listener doesn't properly sign out
+      const { data: authListener } = supabaseClient.auth.onAuthStateChange(
+        (event, session) => {
+          if (event === "SIGNED_OUT") {
+            setUser(null);
+          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+            setUser(session?.user ?? null);
+          }
+        }
+      );
+
+      return () => {
+        authListener?.subscription.unsubscribe();
+      };
+    }
   }, [supabaseClient]);
 
   return (
