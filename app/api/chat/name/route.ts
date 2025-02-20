@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
-import { getSessionMessages } from "../../utils";
+import { createClient } from "@supabase/supabase-js";
+import { requireEnvVar } from "../../utils";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
+
+// Supabase client initializations
+const supabase = createClient(
+  requireEnvVar("NEXT_PUBLIC_SUPABASE_URL"),
+  requireEnvVar("NEXT_PUBLIC_SUPABASE_KEY")
+);
 
 export async function POST(request: Request) {
   try {
@@ -19,12 +26,20 @@ export async function POST(request: Request) {
 
     // Get the chat history for context
     // You'll need to implement this based on your database structure
-    const messages = await getSessionMessages(sessionId);
+    const { data, error } = await supabase
+      .from("messages")
+      .select()
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      throw error;
+    }
 
     const prompt = `Based on the following chat conversation about travel plans, generate a brief, descriptive name for this travel planning session (max 50 characters). The name should capture the essence of the destination or type of trip being discussed. Only return the name, nothing else. If no travel plans have been discussed, return "New Trip".
 
 Chat history:
-${messages.map((m) => `${m.role}: ${m.content}`).join("\n")}`;
+${data?.map((m) => `${m.role}: ${m.content}`).join("\n")}`;
 
     const response = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -12,7 +12,6 @@ import { useChat, useGenerateSessionName } from "@/hooks/useChat";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getActiveSessionName,
-  getActiveSessionLocations,
   getActiveSessionId,
   setActiveSessionId,
 } from "@/redux/sessionSlice";
@@ -87,6 +86,7 @@ export const ChatInterface = () => {
   const [error, setError] = useState(false);
   const [userInput, setUserInput] = useState("");
   const [firstMessageSent, setFirstMessageSent] = useState(false);
+  const [attemptedNameGeneration, setAttemptedNameGeneration] = useState(false);
   const [startAnimation, setStartAnimation] = useState(true);
   const [defaultMessage] = useState<MessageInterface>(
     getRandomDefaultMessage()
@@ -110,45 +110,55 @@ export const ChatInterface = () => {
   const generateNameMutation = useGenerateSessionName();
   const activeSessionName = useSelector(getActiveSessionName);
 
-  // useEffect(() => {
-  //   if (
-  //     activeSessionId &&
-  //     activeSession &&
-  //     activeSession?.name.match(/^Session \d+$/)
-  //   ) {
-  //     generateNameMutation.mutate(
-  //       { sessionId: activeSessionId },
-  //       {
-  //         onSuccess: async (nameResponse) => {
-  //           await updateSession({
-  //             sessionId: activeSessionId,
-  //             name: nameResponse.name,
-  //           });
-  //           refetchSessions();
-  //         },
-  //         onError: (error) => {
-  //           console.error("Failed to generate session name:", error);
-  //         },
-  //       }
-  //     );
-  //   }
-  // }, [
-  //   activeSessionId,
-  //   activeSession,
-  //   generateNameMutation,
-  //   updateSession,
-  //   refetchSessions,
-  // ]);
+  const generateName = useCallback(
+    (sessionId: string) => {
+      generateNameMutation.mutate(
+        { sessionId },
+        {
+          onSuccess: async (nameResponse) => {
+            await updateSession({
+              sessionId,
+              name: nameResponse.name,
+            });
+          },
+          onError: (error) => {
+            console.error("Failed to generate session name:", error);
+          },
+        }
+      );
+    },
+    [generateNameMutation, updateSession]
+  );
 
   useEffect(() => {
     if (messagesSuccess && messages.length > 0 && !firstMessageSent) {
       setFirstMessageSent(true);
-      //setLocalMessages(messages);
       setStartAnimation(false);
       // Start the animation sequence after messages are loaded
       setTimeout(() => setStartAnimation(true), 100);
     }
-  }, [messagesSuccess, messages, firstMessageSent]);
+
+    // Generate name for the session
+    if (
+      messagesSuccess &&
+      messages.length > 2 &&
+      activeSessionId &&
+      !attemptedNameGeneration
+    ) {
+      if (activeSessionName?.match(/^Session \d+$/)) {
+        setAttemptedNameGeneration(true);
+        generateName(activeSessionId);
+      }
+    }
+  }, [
+    messagesSuccess,
+    messages,
+    firstMessageSent,
+    activeSessionId,
+    activeSessionName,
+    generateName,
+    attemptedNameGeneration,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -201,7 +211,7 @@ export const ChatInterface = () => {
       };
       await addMessageMutation.mutateAsync(userMessage);
 
-      // 4. Add AI response to local state
+      // 4. Add AI response
       const data = await chatMutation.mutateAsync({
         sessionId,
         message: messageContent,
