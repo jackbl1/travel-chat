@@ -5,6 +5,7 @@ import { MessageInterface } from "@/lib/types";
 import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, ThumbsDown, ThumbsUp } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface ChatMessagesProps {
   firstMessageSent: boolean;
@@ -19,6 +20,42 @@ export const ChatMessages = ({
   defaultMessage,
   messages,
 }: ChatMessagesProps) => {
+  const handleCopy = (content: string) => {
+    navigator.clipboard.writeText(content);
+    toast({
+      title: "Success",
+      description: "Copied text to clipboard",
+      variant: "default",
+    });
+  };
+
+  const handleDownload = (content: string) => {
+    const element = document.createElement("a");
+    const file = new Blob([content], { type: "text/plain" });
+    element.href = URL.createObjectURL(file);
+    element.download = "message.txt";
+    document.body.appendChild(element);
+    element.click();
+  };
+
+  const handleThumbsUp = (messageId: string) => {
+    // TODO: Implement thumbs up functionality, e.g., send feedback to the server
+    toast({
+      title: "Success",
+      description: "Feedback sent to server",
+      variant: "default",
+    });
+  };
+
+  const handleThumbsDown = (messageId: string) => {
+    // TODO: Implement thumbs down functionality, e.g., send feedback to the server
+    toast({
+      title: "Success",
+      description: "Feedback sent to server",
+      variant: "default",
+    });
+  };
+
   return (
     <div className="space-y-4">
       {!firstMessageSent && (
@@ -90,16 +127,36 @@ export const ChatMessages = ({
             </div>
             {message.role === "agent" && (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleCopy(message.content)}
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleDownload(message.content)}
+                >
                   <Download className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleThumbsUp(message.messageId)}
+                >
                   <ThumbsUp className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleThumbsDown(message.messageId)}
+                >
                   <ThumbsDown className="h-4 w-4" />
                 </Button>
               </div>

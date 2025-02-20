@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
 import { useSearchParams } from "next/navigation";
 import { Icons } from "@/components/icons";
 import { createClient } from "@/utils/supabase/client";
 import { LoaderCircle } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 export const GoogleButton = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false);
