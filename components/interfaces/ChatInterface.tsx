@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,7 +46,7 @@ export const ChatInterface = () => {
   const [defaultMessage] = useState<MessageInterface>(
     getRandomDefaultMessage()
   );
-
+  const scrollRef = useRef<HTMLDivElement>(null);
   const { user } = useSupabase();
   const { data: sessions, refetch: refetchSessions } = useGetSessions(user?.id);
   const activeSessionId = useSelector(getActiveSessionId);
@@ -104,6 +104,18 @@ export const ChatInterface = () => {
         setAttemptedNameGeneration(true);
         generateName(activeSessionId);
       }
+    }
+
+    // Scroll to the bottom when messages are loaded or updated
+    if (scrollRef.current) {
+      setTimeout(
+        () =>
+          scrollRef.current?.scrollIntoView({
+            behavior: "smooth",
+            block: "end",
+          }),
+        300
+      );
     }
   }, [
     messagesSuccess,
@@ -236,7 +248,7 @@ export const ChatInterface = () => {
   return (
     <div className="flex-1 flex flex-col h-screen relative">
       <ScrollArea className="flex-1 p-4 overflow-y-auto">
-        <div className="space-y-4">
+        <div className="space-y-4" ref={scrollRef}>
           <ChatMessages
             firstMessageSent={firstMessageSent}
             startAnimation={startAnimation}
