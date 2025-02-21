@@ -6,6 +6,7 @@ import { UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Copy, Download, ThumbsDown, ThumbsUp } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface ChatMessagesProps {
   firstMessageSent: boolean;
@@ -20,6 +21,13 @@ export const ChatMessages = ({
   defaultMessage,
   messages,
 }: ChatMessagesProps) => {
+  const [thumbsDownClicked, setThumbsDownClicked] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [thumbsUpClicked, setThumbsUpClicked] = useState<{
+    [key: string]: boolean;
+  }>({});
+
   const handleCopy = (content: string) => {
     navigator.clipboard.writeText(content);
     toast({
@@ -39,21 +47,53 @@ export const ChatMessages = ({
   };
 
   const handleThumbsUp = (messageId: string) => {
-    // TODO: Implement thumbs up functionality, e.g., send feedback to the server
-    toast({
-      title: "Success",
-      description: "Feedback sent to server",
-      variant: "default",
-    });
+    if (thumbsUpClicked[messageId]) {
+      setThumbsUpClicked((prev) => ({
+        ...prev,
+        [messageId]: false,
+      }));
+    } else {
+      if (thumbsDownClicked[messageId]) {
+        setThumbsDownClicked((prev) => ({
+          ...prev,
+          [messageId]: false,
+        }));
+      }
+      setThumbsUpClicked((prev) => ({
+        ...prev,
+        [messageId]: true,
+      }));
+      toast({
+        title: "Success",
+        description: "Feedback sent to server",
+        variant: "default",
+      });
+    }
   };
 
   const handleThumbsDown = (messageId: string) => {
-    // TODO: Implement thumbs down functionality, e.g., send feedback to the server
-    toast({
-      title: "Success",
-      description: "Feedback sent to server",
-      variant: "default",
-    });
+    if (thumbsDownClicked[messageId]) {
+      setThumbsDownClicked((prev) => ({
+        ...prev,
+        [messageId]: false,
+      }));
+    } else {
+      if (thumbsUpClicked[messageId]) {
+        setThumbsUpClicked((prev) => ({
+          ...prev,
+          [messageId]: false,
+        }));
+      }
+      setThumbsDownClicked((prev) => ({
+        ...prev,
+        [messageId]: true,
+      }));
+      toast({
+        title: "Success",
+        description: "Feedback sent to server",
+        variant: "default",
+      });
+    }
   };
 
   return (
@@ -149,7 +189,10 @@ export const ChatMessages = ({
                   className="h-8 w-8"
                   onClick={() => handleThumbsUp(message.messageId)}
                 >
-                  <ThumbsUp className="h-4 w-4" />
+                  <ThumbsUp
+                    className="h-4 w-4"
+                    fill={thumbsUpClicked[message.messageId] ? "black" : "none"}
+                  />
                 </Button>
                 <Button
                   variant="ghost"
@@ -157,7 +200,12 @@ export const ChatMessages = ({
                   className="h-8 w-8"
                   onClick={() => handleThumbsDown(message.messageId)}
                 >
-                  <ThumbsDown className="h-4 w-4" />
+                  <ThumbsDown
+                    className="h-4 w-4"
+                    fill={
+                      thumbsDownClicked[message.messageId] ? "black" : "none"
+                    }
+                  />
                 </Button>
               </div>
             )}
