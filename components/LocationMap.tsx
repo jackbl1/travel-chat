@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 import ErrorMessage from "./ErrorMessage";
 import MapsInfoMessage from "./MapsInfoMessage";
 import { LocationType } from "@/lib/types";
 
-interface GeocodedLocation extends Location {
+interface GeocodedLocation {
+  name: string;
   lat: number;
   lng: number;
 }
@@ -32,24 +33,34 @@ export const LocationMap = ({
   selectedLocation: string | null;
 }) => {
   const [isClient, setIsClient] = useState(false);
+  const [isMapLoaded, setIsMapLoaded] = useState(false);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const [geocodedLocations, setGeocodedLocations] = useState<
-    GeocodedLocation[]
-  >([]);
-  const [isGeocoding, setIsGeocoding] = useState(false);
+  const [geocodedLocations, setGeocodedLocations] = useState<GeocodedLocation[]>([]);
   const [failedLocations, setFailedLocations] = useState<string[]>([]);
+  const hasZoomedRef = useRef<string | null>(null);
+  const geocodedLocationNames = useRef(new Set<string>());
 
+  // Zoom to selected location or fit bounds to all locations
   useEffect(() => {
-    if (selectedLocation && geocodedLocations.length > 0) {
-      const location = geocodedLocations.find(
-        (loc) => loc.hostname === selectedLocation
-      );
-      if (location && mapRef.current) {
-        mapRef.current.panTo({ lat: location.lat, lng: location.lng });
-        mapRef.current.setZoom(15);
+    if (geocodedLocations.length > 0 && mapRef.current) {
+      if (selectedLocation) {
+        const location = geocodedLocations.find(
+          (loc) => loc.name === selectedLocation
+        );
+        if (location && hasZoomedRef.current !== selectedLocation) {
+          mapRef.current.panTo({ lat: location.lat, lng: location.lng });
+          mapRef.current.setZoom(7);
+          hasZoomedRef.current = selectedLocation;
+        }
+      } else {
+        const bounds = new window.google.maps.LatLngBounds();
+        geocodedLocations.forEach((location) => {
+          bounds.extend(new window.google.maps.LatLng(location.lat, location.lng));
+        });
+        mapRef.current.fitBounds(bounds);
       }
     }
-  }, [selectedLocation, geocodedLocations]);
+  }, [selectedLocation, geocodedLocations, isMapLoaded]);
 
   useEffect(() => {
     setIsClient(true);
@@ -60,48 +71,12 @@ export const LocationMap = ({
     googleMapsApiKey: apiKey || "",
   });
 
-  const [map, setMap] = useState(null);
-
-  const onLoad = useCallback(
-    function callback(map) {
-      if (geocodedLocations.length === 0) return;
-
-      const bounds = new window.google.maps.LatLngBounds(center);
-      geocodedLocations.forEach((location) =>
-        bounds.extend({ lat: location.lat, lng: location.lng })
-      );
-      map.fitBounds(bounds);
-      setMap(map);
-    },
-    [geocodedLocations]
-  );
-
-  const onUnmount = useCallback(function callback(map) {
-    setMap(null);
-  }, []);
-
-  // New separate useEffect for bounds
-  useEffect(() => {
-    if (map && geocodedLocations.length > 0) {
-      const bounds = new window.google.maps.LatLngBounds();
-      geocodedLocations.forEach((location) => {
-        bounds.extend({ lat: location.lat, lng: location.lng });
-      });
-      map.fitBounds(bounds);
-    }
-  }, [map, geocodedLocations]);
-
+  // geocode locations
   useEffect(() => {
     if (isLoaded && apiKey) {
       setFailedLocations([]); // Reset failed locations on new geocoding attempt
-      // Skip geocoding if all locations already have coordinates
       const curLocations = locations ?? [];
-      // if (curLocations.every((loc) => "lat" in loc && "lng" in loc)) {
-      //   setGeocodedLocations(curLocations as GeocodedLocation[]);
-      //   return;
-      // }
 
-      setIsGeocoding(true);
       const geocoder = new window.google.maps.Geocoder();
       const promises = curLocations.map(
         (location) =>
@@ -110,7 +85,25 @@ export const LocationMap = ({
             location?: GeocodedLocation;
             name?: string;
           }>((resolve) => {
-            // If location already has coordinates, use them
+            const existingLocation = geocodedLocations.find(
+              (loc) => loc.name === location.name
+            );
+            if (existingLocation) {
+              resolve({
+                success: true,
+                location: existingLocation,
+              });
+              return;
+            }
+
+            if (failedLocations.includes(location.name)) {
+              resolve({
+                success: false,
+                name: location.name,
+              });
+              return;
+            }
+
             if ("lat" in location && "lng" in location) {
               resolve({
                 success: true,
@@ -119,8 +112,9 @@ export const LocationMap = ({
               return;
             }
 
+            console.log("geocoding ", location.name);
             geocoder.geocode({ address: location.name }, (results, status) => {
-              if (status === "OK" && results[0]) {
+              if (status === "OK" && results && results[0]) {
                 const { lat, lng } = results[0].geometry.location.toJSON();
                 resolve({
                   success: true,
@@ -133,6 +127,7 @@ export const LocationMap = ({
           })
       );
 
+      // this is a bit of a mess but stops us from geocoding the same location multiple times
       Promise.all(promises)
         .then((results) => {
           const successfulResults = results.filter(
@@ -143,10 +138,18 @@ export const LocationMap = ({
           const failures = results
             .filter((result) => !result.success)
             .map((result) => result.name!);
-          setFailedLocations(failures);
-          setGeocodedLocations(successfulResults.map((r) => r.location));
-        })
-        .finally(() => setIsGeocoding(false));
+          setFailedLocations((prev) => [...prev, ...failures]);
+
+          const newGeocodedLocations = successfulResults
+            .map((r) => r.location)
+            .filter((location) => !geocodedLocationNames.current.has(location.name));
+
+          newGeocodedLocations.forEach((location) => {
+            geocodedLocationNames.current.add(location.name);
+          });
+
+          setGeocodedLocations((prev) => [...prev, ...newGeocodedLocations]);
+        });
     }
   }, [isLoaded, apiKey, locations]);
 
@@ -176,8 +179,10 @@ export const LocationMap = ({
         mapContainerStyle={containerStyle}
         center={center}
         zoom={10}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
+        onLoad={(map) => {
+          mapRef.current = map;
+          setIsMapLoaded(true);
+        }}
       >
         {geocodedLocations.map((location, index) => (
           <Marker
