@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "react-query";
 import { apiRoutes } from "../lib/api-routes";
-import { SessionInterface } from "@/lib/types";
+import { PlaceInfo, SessionInterface } from "@/lib/types";
 import axios from "axios";
 import { useSupabase } from "@/contexts/SupabaseContext";
 
@@ -70,16 +70,20 @@ export const useAddSession = () => {
   });
 };
 
-export const useAddDetailsToSession = () => {
+export const useAddSessionData = () => {
   return useMutation({
     mutationFn: async (payload: {
       sessionId: string;
       locations?: string[];
+      activities?: PlaceInfo[];
+      accommodations?: PlaceInfo[];
     }) => {
       return axios.post(
         `${apiRoutes.session}/${payload.sessionId}`,
         {
           locations: payload.locations,
+          activities: payload.activities,
+          accommodations: payload.accommodations,
         },
         {
           headers: {

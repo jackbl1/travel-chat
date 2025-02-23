@@ -153,21 +153,23 @@ export const ChatInterface = () => {
         dispatch(setActiveSessionId(newSession.sessionId));
       }
 
-      // 2. Add initial AI message if this is the first message
-      if (!firstMessageSent) {
-        const initialAiMessage = {
-          sessionId,
-          content: defaultMessage.content,
-          role: "agent",
-          userId: user.id,
-          createdAt: new Date().toISOString(),
-          messageId: `temp-${Date.now()}`,
-        };
-        await addMessageMutation.mutateAsync(initialAiMessage);
-        setFirstMessageSent(true);
-      }
+      // // 2. Add initial AI message if this is the first message
+      // TODO: also just pass in this initial AI message to the endpoint instead of saving it here
+      // if (!firstMessageSent) {
+      //   const initialAiMessage = {
+      //     sessionId,
+      //     content: defaultMessage.content,
+      //     role: "agent",
+      //     userId: user.id,
+      //     createdAt: new Date().toISOString(),
+      //     messageId: `temp-${Date.now()}`,
+      //   };
+      //   await addMessageMutation.mutateAsync(initialAiMessage);
+      //   setFirstMessageSent(true);
+      // }
 
       // 3. Add user message
+      // TODO: make sure the chat endpoint saves this user message, so no need to save it here
       const userMessage = {
         sessionId,
         content: messageContent,
@@ -183,6 +185,10 @@ export const ChatInterface = () => {
         sessionId,
         message: messageContent,
       });
+
+      console.log("called chatmutation from front end");
+      console.log(data);
+
       const aiMessage = {
         sessionId,
         content: data.reply,
@@ -197,6 +203,8 @@ export const ChatInterface = () => {
         addDetailsToSession({
           sessionId,
           locations: data.locations,
+          activities: data.activities,
+          accommodations: data.accommodations,
         }),
         addMessageMutation.mutateAsync(aiMessage),
       ]);

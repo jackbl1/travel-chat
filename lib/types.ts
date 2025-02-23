@@ -9,6 +9,19 @@ export type LatLongType = {
   long: number;
 };
 
+export enum SessionDataType {
+  LOCATION = "location",
+  ACTIVITY = "activity",
+  ACCOMMODATION = "accommodation",
+}
+
+export type SessionDataInterface = {
+  name: string;
+  url: string;
+  type: SessionDataType;
+  createdAt: string;
+};
+
 export type SessionInterface = {
   sessionId: string;
   name: string;
