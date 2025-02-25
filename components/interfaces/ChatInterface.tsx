@@ -14,8 +14,8 @@ import {
   setActiveSessionId,
 } from "@/redux/sessionSlice";
 import {
-  useAddDetailsToSession,
   useAddSession,
+  useAddSessionData,
   useGetSessions,
   useUpdateSession,
 } from "@/hooks/useSessions";
@@ -60,7 +60,7 @@ export const ChatInterface = () => {
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
-  const { mutateAsync: addDetailsToSession } = useAddDetailsToSession();
+  const { mutateAsync: addSessionData } = useAddSessionData();
   const chatMutation = useChat();
   const generateNameMutation = useGenerateSessionName();
   const activeSessionName = useSelector(getActiveSessionName);
@@ -200,7 +200,7 @@ export const ChatInterface = () => {
       setLoading(false);
 
       await Promise.all([
-        addDetailsToSession({
+        addSessionData({
           sessionId,
           locations: data.locations,
           activities: data.activities,

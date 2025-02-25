@@ -6,6 +6,12 @@ import { ChatAnthropic } from "@langchain/anthropic";
 import { HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
+import {
+  LocationDataType,
+  LocationDataInterface,
+  LocationDataInterfaceDB,
+  LocationInterface,
+} from "@/lib/types";
 
 // Supabase client initializations
 const supabase = createClient(
@@ -64,13 +70,11 @@ const locationTool = tool(
 const activityTool = tool(
   async ({ location }) => {
     const formattedResults = await performGoogleSearch(
-      `top rated tours activities things to do in ${location} booking.com viator`
+      `The best activity to do in ${location}`
     );
 
     return JSON.stringify({
-      [location]: {
-        activities: formattedResults,
-      },
+      activities: formattedResults,
     });
   },
   {
@@ -85,15 +89,13 @@ const activityTool = tool(
 );
 
 const accommodationsTool = tool(
-  async ({ location, nights }) => {
+  async ({ location }) => {
     const formattedResults = await performGoogleSearch(
-      `best hotels resorts in ${location} booking.com tripadvisor`
+      `Top rated hotel in ${location}`
     );
 
     return JSON.stringify({
-      [location]: {
-        accommodations: formattedResults,
-      },
+      accommodations: formattedResults,
     });
   },
   {
@@ -101,7 +103,6 @@ const accommodationsTool = tool(
     description: "Get recommended accommodations with booking URLs",
     schema: z.object({
       location: z.string().describe("The location to find accommodations in"),
-      nights: z.number().describe("Number of nights needed"),
     }),
   }
 );
@@ -126,6 +127,13 @@ interface LocationData {
   locations: string[];
   activities: Record<string, PlaceInfo[]>;
   accommodations: Record<string, PlaceInfo[]>;
+}
+
+interface ChatResponse {
+  reply: string;
+  locations: LocationInterface[];
+  activities: LocationDataInterface[];
+  accommodations: LocationDataInterface[];
 }
 
 export async function POST(request: Request) {
@@ -300,14 +308,98 @@ After calling all of these tools to gather context, send the user a full itinera
 
     await supabase.from("messages").insert(messagesToSave);
 
-    console.log("tool data at the very end");
-    console.log(toolData);
+    // Create session data objects for locations, activities, and accommodations
+    const sessionDataToInsert: Omit<
+      SessionDataInterfaceDB,
+      "session_data_id"
+    >[] = [];
+    const timestamp = new Date().toISOString();
+
+    // Process locations
+    const uniqueLocations = [...new Set(toolData.locations)];
+    for (const location of uniqueLocations) {
+      sessionDataToInsert.push({
+        session_id: sessionId,
+        name: location,
+        url: "", // Locations don't have URLs in our current implementation
+        type: SessionDataType.LOCATION,
+        created_at: timestamp,
+      });
+    }
+
+    // Process activities
+    for (const activities of Object.values(toolData.activities)) {
+      for (const activity of activities) {
+        sessionDataToInsert.push({
+          session_id: sessionId,
+          name: activity.name,
+          url: activity.url,
+          type: SessionDataType.ACTIVITY,
+          created_at: timestamp,
+        });
+      }
+    }
+
+    // Process accommodations
+    for (const accommodations of Object.values(toolData.accommodations)) {
+      for (const accommodation of accommodations) {
+        sessionDataToInsert.push({
+          session_id: sessionId,
+          name: accommodation.name,
+          url: accommodation.url,
+          type: SessionDataType.ACCOMMODATION,
+          created_at: timestamp,
+        });
+      }
+    }
+
+    // Insert all session data into the database
+    const { data: insertedSessionData, error: insertError } = await supabase
+      .from("session_data")
+      .insert(sessionDataToInsert)
+      .select();
+
+    if (insertError) {
+      console.error("Error inserting session data:", insertError);
+      throw insertError;
+    }
+
+    // Transform the inserted data to match SessionDataInterface
+    const transformedSessionData = insertedSessionData.map((item) => ({
+      sessionDataId: item.session_data_id,
+      sessionId: item.session_id,
+      name: item.name,
+      url: item.url,
+      type: item.type,
+      createdAt: item.created_at,
+    }));
+
+    // Group the transformed data by type for the response
+    const sessionData = transformedSessionData.reduce(
+      (acc, item) => {
+        switch (item.type) {
+          case LocationDataType.LOCATION:
+            acc.locations = [...(acc.locations || []), item];
+            break;
+          case LocationDataType.ACTIVITY:
+            acc.activities = [...(acc.activities || []), item];
+            break;
+          case LocationDataType.ACCOMMODATION:
+            acc.accommodations = [...(acc.accommodations || []), item];
+            break;
+        }
+        return acc;
+      },
+      { locations: [], activities: [], accommodations: [] }
+    );
+
+    //TODO: use supabase to store session data
 
     return NextResponse.json({
       reply: itinerary,
-      locations: [...new Set(toolData.locations)], // Remove duplicates
-      activities: toolData.activities,
-      accommodations: toolData.accommodations,
+      locations: sessionData.locations,
+      activities: sessionData.activities,
+      accommodations: sessionData.accommodations,
     });
   } catch (error) {
     console.error("Error:", error);

@@ -1,12 +1,12 @@
-import { PlaceInfo } from "@/lib/types";
+import { SessionDataInterface } from "@/lib/types";
 import axios from "axios";
 import { useMutation } from "react-query";
 
 interface ChatResponse {
   reply: string;
-  locations: string[];
-  activities: PlaceInfo[];
-  accommodations: PlaceInfo[];
+  locations: Partial<SessionDataInterface>[];
+  activities: Partial<SessionDataInterface>[];
+  accommodations: Partial<SessionDataInterface>[];
 }
 
 interface SessionNameResponse {

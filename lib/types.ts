@@ -9,17 +9,47 @@ export type LatLongType = {
   long: number;
 };
 
-export enum SessionDataType {
+export enum LocationDataType {
   LOCATION = "location",
   ACTIVITY = "activity",
   ACCOMMODATION = "accommodation",
 }
 
-export type SessionDataInterface = {
+export type LocationDataInterface = {
+  locationDataId: string;
+  locationId: string;
+  sessionId: string;
   name: string;
   url: string;
-  type: SessionDataType;
+  type: LocationDataType;
   createdAt: string;
+};
+
+export type LocationDataInterfaceDB = {
+  location_data_id: string;
+  session_id: string;
+  name: string;
+  url: string;
+  type: LocationDataType;
+  created_at: string;
+};
+
+export type LocationInterface = {
+  locationId: string;
+  sessionId: string;
+  name: string;
+  region: string;
+  country: string;
+  createdAt: string;
+};
+
+export type LocationInterfaceDB = {
+  location_id: string;
+  session_id: string;
+  name: string;
+  region: string;
+  country: string;
+  created_at: string;
 };
 
 export type SessionInterface = {
