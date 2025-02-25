@@ -27,6 +27,7 @@ export type LocationDataInterface = {
 
 export type LocationDataInterfaceDB = {
   location_data_id: string;
+  location_id: string;
   session_id: string;
   name: string;
   url: string;

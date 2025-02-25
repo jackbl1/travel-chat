@@ -30,8 +30,15 @@ const supabase = createClient(
 
 const googleSearch = google.customsearch("v1");
 
+type GoogleSearchResult = {
+  name: string;
+  url: string;
+};
+
 // Helper function for Google Search API calls
-async function performGoogleSearch(query: string): Promise<PlaceInfo[]> {
+async function performGoogleSearch(
+  query: string
+): Promise<GoogleSearchResult[]> {
   try {
     const searchResponse = await googleSearch.cse.list({
       cx: requireEnvVar("GOOGLE_SEARCH_ENGINE_ID"),
@@ -40,14 +47,9 @@ async function performGoogleSearch(query: string): Promise<PlaceInfo[]> {
       num: 5,
     });
 
-    // TODO: improve search here, google is bad
-    //console.log("made google search successfully");
-    //console.log(query);
-    //console.log(searchResponse);
-
     return (searchResponse.data.items || []).map((item) => ({
-      name: item.title,
-      url: item.link,
+      name: item.title || "",
+      url: item.link || "",
     }));
   } catch (error) {
     console.error("Google Search API error:", error);
@@ -56,27 +58,6 @@ async function performGoogleSearch(query: string): Promise<PlaceInfo[]> {
 }
 
 // LangChain tool definitions
-// const locationTool = tool(
-//   async ({ destination }) => {
-//     const formattedResults = await performGoogleSearch(
-//       `best tourist attractions points of interest in ${destination} travel guide`
-//     );
-
-//     return JSON.stringify({
-//       location: destination,
-//       attractions: formattedResults,
-//     });
-//   },
-//   {
-//     name: "location",
-//     description:
-//       "Get a list of recommended locations to visit at the destination",
-//     schema: z.object({
-//       destination: z.string().describe("The main destination to explore"),
-//     }),
-//   }
-// );
-
 const activityTool = tool(
   async ({ location }) => {
     const formattedResults = await performGoogleSearch(
@@ -121,11 +102,7 @@ const anthropic = new Anthropic({
   apiKey: requireEnvVar("ANTHROPIC_API_KEY"),
 });
 
-const tools = [
-  //locationTool,
-  activityTool,
-  accommodationsTool,
-];
+const tools = [activityTool, accommodationsTool];
 
 // Initialize LangChain Anthropic chat model
 const llm = new ChatAnthropic({
@@ -196,24 +173,6 @@ function parsePreviousMessages(data: MessageInterface[]): MessageParam[] {
   }));
 }
 
-interface PlaceInfo {
-  name: string;
-  url: string;
-}
-
-interface LocationData {
-  locations: string[];
-  activities: Record<string, PlaceInfo[]>;
-  accommodations: Record<string, PlaceInfo[]>;
-}
-
-interface ChatResponse {
-  reply: string;
-  locations: LocationInterface[];
-  activities: LocationDataInterface[];
-  accommodations: LocationDataInterface[];
-}
-
 export async function POST(request: Request) {
   try {
     const { sessionId, message } = await request.json();
@@ -268,7 +227,7 @@ export async function POST(request: Request) {
 
     console.log("location response generated", locationResponse);
 
-    const uniqueLocations: LocationInterface[] = parseLocationResponse(
+    const uniqueLocations: Partial<LocationInterface>[] = parseLocationResponse(
       locationResponse.content
     );
 
@@ -293,172 +252,60 @@ export async function POST(request: Request) {
       throw insertLocationError;
     }
 
-    // Get initial response
-    let response = await llmWithTools.invoke(messages, {
-      system: `You are an experienced travel agent helping users plan trips. You must use the following tools in order:
-1. Use the 'location' tool to get recommended locations for the destination
-2. Use the 'activity' tool for each major location to get activity recommendations
-3. Use the 'accommodations' tool to find places to stay
-
-After calling all of these tools to gather context, send the user a full itinerary for their travel including desintations, activities, and accommodations for each day. Format your response as a concise and readable travel itinerary.`,
-    });
-
-    messages.push(response);
-
-    // Process tool calls until no more are requested
-    while (response.tool_calls && response.tool_calls.length > 0) {
-      const toolResults = await Promise.all(
-        response.tool_calls.map(async (toolCall) => {
-          const tool = tools.find((t) => t.name === toolCall.name);
-          if (!tool) throw new Error(`Tool ${toolCall.name} not found`);
-          return tool.invoke(toolCall);
-        })
-      );
-
-      // Add tool results to messages
-      messages.push(...toolResults);
-
-      // Get next response
-      response = await llmWithTools.invoke(messages);
-      messages.push(response);
-    }
-
-    // Extract data from tool calls
-    const toolData: LocationData = {
-      locations: [],
-      activities: {},
-      accommodations: {},
-    };
-
-    // Helper function to safely parse JSON
-    function safeJSONParse(content: string) {
-      try {
-        return JSON.parse(content);
-      } catch (e) {
-        console.error(`Error parsing JSON: ${content}`, e);
-        return null;
-      }
-    }
-
-    // Helper function to validate PlaceInfo array
-    function isValidPlaceInfoArray(arr: any): arr is PlaceInfo[] {
-      return (
-        Array.isArray(arr) &&
-        arr.every(
-          (item) =>
-            typeof item === "object" &&
-            typeof item.name === "string" &&
-            typeof item.url === "string"
-        )
-      );
-    }
-
-    // Process all messages to extract structured data
-    for (const message of messages) {
-      if (!(message instanceof ToolMessage)) continue;
-
-      const result = safeJSONParse(message.content);
-      if (!result) continue;
-
-      try {
-        // Handle location tool result
-        if (result.location && result.attractions) {
-          if (isValidPlaceInfoArray(result.attractions)) {
-            toolData.locations.push(result.location);
-          }
-          continue;
-        }
-
-        // Handle activity/accommodation tool results
-        const location = Object.keys(result)[0];
-        if (!location) continue;
-
-        const locationData = result[location];
-        if (!locationData) continue;
-
-        if (
-          locationData.activities &&
-          isValidPlaceInfoArray(locationData.activities)
-        ) {
-          toolData.activities[location] = locationData.activities;
-        }
-
-        if (
-          locationData.accommodations &&
-          isValidPlaceInfoArray(locationData.accommodations)
-        ) {
-          toolData.accommodations[location] = locationData.accommodations;
-        }
-      } catch (e) {
-        console.error(`Error processing tool result: ${message.content}`, e);
-      }
-    }
-
-    // Get the final response text
-    const itinerary = response.content;
-
-    // Save messages to database
-    const messagesToSave = messages
-      .map((msg) => {
-        const baseMessage = {
-          session_id: sessionId,
-          created_at: new Date().toISOString(),
-          content: msg instanceof AIMessage ? msg.content : msg.content,
-        };
-
-        if (msg instanceof HumanMessage) {
-          return { ...baseMessage, role: "user" };
-        } else if (msg instanceof AIMessage) {
-          return { ...baseMessage, role: "assistant" };
-        } else if (msg instanceof ToolMessage) {
-          return {
-            ...baseMessage,
-            role: "tool",
-            tool_call_id: msg.tool_call_id,
-            name: msg.name,
-          };
-        }
-      })
-      .filter(Boolean);
-
-    await supabase.from("messages").insert(messagesToSave);
-
-    // Create session data objects for locations, activities, and accommodations
+    // Process each location to generate activities and accommodations
     const locationDataToInsert: Omit<
       LocationDataInterfaceDB,
       "location_data_id"
     >[] = [];
     const timestamp = new Date().toISOString();
 
-    // Process activities
-    for (const activities of Object.values(toolData.activities)) {
-      for (const activity of activities) {
+    // Process each location sequentially
+    for (const location of insertedLocations) {
+      const locationName = `${location.name}, ${location.region}, ${location.country}`;
+
+      // Generate activities for this location
+      const activityResponse = await activityTool.invoke({
+        location: locationName,
+      });
+      const activityData = JSON.parse(activityResponse).activities || [];
+
+      console.log("generated activity data", activityData);
+
+      // Generate accommodations for this location
+      const accommodationResponse = await accommodationsTool.invoke({
+        location: locationName,
+      });
+      const accommodationData =
+        JSON.parse(accommodationResponse).accommodations || [];
+
+      console.log("generated accommodation data", accommodationData);
+
+      // Add activities to database entries
+      activityData.forEach((activity: GoogleSearchResult) => {
         locationDataToInsert.push({
           session_id: sessionId,
           name: activity.name,
           url: activity.url,
           type: LocationDataType.ACTIVITY,
           created_at: timestamp,
+          location_id: location.locationId, // If available from inserted locations
         });
-      }
-    }
+      });
 
-    // Process accommodations
-    for (const accommodations of Object.values(toolData.accommodations)) {
-      for (const accommodation of accommodations) {
+      // Add accommodations to database entries
+      accommodationData.forEach((accommodation: GoogleSearchResult) => {
         locationDataToInsert.push({
           session_id: sessionId,
           name: accommodation.name,
           url: accommodation.url,
           type: LocationDataType.ACCOMMODATION,
           created_at: timestamp,
+          location_id: location.locationId, // If available from inserted locations
         });
-      }
+      });
     }
 
-    console.log("location data to insert:", locationDataToInsert);
-
-    // Insert all session data into the database
+    // Insert all location data into the database
     const { data: insertedLocationData, error: insertDataError } =
       await supabase
         .from("location_data")
@@ -466,43 +313,36 @@ After calling all of these tools to gather context, send the user a full itinera
         .select();
 
     if (insertDataError) {
-      console.error("Error inserting session data:", insertDataError);
+      console.error("Error inserting location data:", insertDataError);
       throw insertDataError;
     }
 
-    // Transform the inserted data to match SessionDataInterface
-    const transformedLocationData = insertedLocationData.map((item) => ({
-      locationDataId: item.location_data_id,
-      sessionId: item.session_id,
-      name: item.name,
-      url: item.url,
-      type: item.type,
-      createdAt: item.created_at,
-    }));
+    // Generate final itinerary using Claude
+    const finalResponse = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 2048,
+      system:
+        "You are an experienced travel agent. Create a detailed day-by-day itinerary based on the locations, activities, and accommodations provided. Make it engaging and well-organized.",
+      messages: [
+        ...anthropicMessages,
+        {
+          role: "user",
+          content: `Create a travel itinerary for the following locations and their activities:\n\n${JSON.stringify(
+            {
+              locations: insertedLocations,
+              locationData: insertedLocationData,
+            },
+            null,
+            2
+          )}`,
+        },
+      ],
+    });
 
-    // Group the transformed data by type for the response
-    const returnData = transformedLocationData.reduce(
-      (acc, item) => {
-        switch (item.type) {
-          case LocationDataType.ACTIVITY:
-            acc.activities = [...(acc.activities || []), item];
-            break;
-          case LocationDataType.ACCOMMODATION:
-            acc.accommodations = [...(acc.accommodations || []), item];
-            break;
-        }
-        return acc;
-      },
-      { activities: [], accommodations: [] }
-    );
-
-    //TODO: use supabase to store session data
+    const itinerary = finalResponse.content[0].text;
 
     return NextResponse.json({
       reply: itinerary,
-      locations: insertedLocations,
-      activities: returnData.activities,
-      accommodations: returnData.accommodations,
     });
   } catch (error) {
     console.error("Error:", error);
