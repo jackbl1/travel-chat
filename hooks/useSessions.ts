@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "react-query";
 import { apiRoutes } from "../lib/api-routes";
-import { SessionInterface, SessionDataInterface } from "@/lib/types";
+import { SessionInterface } from "@/lib/types";
 import axios from "axios";
 import { useSupabase } from "@/contexts/SupabaseContext";
 
@@ -15,29 +15,10 @@ export const useGetSessions = (userId?: string) => {
   });
 };
 
-export const useGetSessionData = (sessionId?: string | undefined) => {
-  return useQuery({
-    queryKey: ["sessionData", sessionId],
-    queryFn: async (): Promise<Array<SessionDataInterface>> => {
-      const response = await fetch(
-        `${apiRoutes.sessionData}?sessionId=${sessionId}`
-      );
-      return await response.json();
-    },
-    enabled: !!sessionId,
-  });
-};
-
 export const useAddSession = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    /**
-     * Creates a new session.
-     *
-     * @param newSession - Object containing the session's details.
-     * @returns The newly created session.
-     */
     mutationFn: async (
       newSession: Omit<
         SessionInterface,
@@ -79,31 +60,6 @@ export const useAddSession = () => {
       if (data?.data) {
         queryClient.invalidateQueries(["sessions", newSession.userId]);
       }
-    },
-  });
-};
-
-export const useAddSessionData = () => {
-  return useMutation({
-    mutationFn: async (payload: {
-      sessionId: string;
-      locations?: Partial<SessionDataInterface>[];
-      activities?: Partial<SessionDataInterface>[];
-      accommodations?: Partial<SessionDataInterface>[];
-    }) => {
-      return axios.post(
-        `${apiRoutes.sessionData}/${payload.sessionId}`,
-        {
-          locations: payload.locations,
-          activities: payload.activities,
-          accommodations: payload.accommodations,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
-      );
     },
   });
 };

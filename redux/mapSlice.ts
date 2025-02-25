@@ -1,8 +1,9 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "./store";
+import { LocationInterface } from "@/lib/types";
 
 interface MapState {
-  selectedLocation: string | null;
+  selectedLocation: string | LocationInterface | null;
 }
 
 const initialState: MapState = {
@@ -13,7 +14,10 @@ export const mapSlice = createSlice({
   name: "map",
   initialState,
   reducers: {
-    setSelectedLocation: (state, action: PayloadAction<string | null>) => {
+    setSelectedLocation: (
+      state,
+      action: PayloadAction<string | LocationInterface | null>
+    ) => {
       state.selectedLocation = action.payload;
     },
     resetMap: () => initialState,

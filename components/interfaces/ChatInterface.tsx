@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Image from "next/image";
 import { useSupabase } from "@/contexts/SupabaseContext";
-import { useChat, useGenerateSessionName } from "@/hooks/useChat";
+import { useChat, useGenerateSessionName } from "@/hooks/useGeneration";
 import { useDispatch, useSelector } from "react-redux";
 import {
   getActiveSessionName,
@@ -15,7 +15,6 @@ import {
 } from "@/redux/sessionSlice";
 import {
   useAddSession,
-  useAddSessionData,
   useGetSessions,
   useUpdateSession,
 } from "@/hooks/useSessions";
@@ -60,7 +59,6 @@ export const ChatInterface = () => {
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
-  const { mutateAsync: addSessionData } = useAddSessionData();
   const chatMutation = useChat();
   const generateNameMutation = useGenerateSessionName();
   const activeSessionName = useSelector(getActiveSessionName);
@@ -153,20 +151,20 @@ export const ChatInterface = () => {
         dispatch(setActiveSessionId(newSession.sessionId));
       }
 
-      // // 2. Add initial AI message if this is the first message
+      // 2. Add initial AI message if this is the first message
       // TODO: also just pass in this initial AI message to the endpoint instead of saving it here
-      // if (!firstMessageSent) {
-      //   const initialAiMessage = {
-      //     sessionId,
-      //     content: defaultMessage.content,
-      //     role: "agent",
-      //     userId: user.id,
-      //     createdAt: new Date().toISOString(),
-      //     messageId: `temp-${Date.now()}`,
-      //   };
-      //   await addMessageMutation.mutateAsync(initialAiMessage);
-      //   setFirstMessageSent(true);
-      // }
+      if (!firstMessageSent) {
+        const initialAiMessage = {
+          sessionId,
+          content: defaultMessage.content,
+          role: "agent",
+          userId: user.id,
+          createdAt: new Date().toISOString(),
+          messageId: `temp-${Date.now()}`,
+        };
+        await addMessageMutation.mutateAsync(initialAiMessage);
+        setFirstMessageSent(true);
+      }
 
       // 3. Add user message
       // TODO: make sure the chat endpoint saves this user message, so no need to save it here
@@ -186,9 +184,6 @@ export const ChatInterface = () => {
         message: messageContent,
       });
 
-      console.log("called chatmutation from front end");
-      console.log(data);
-
       const aiMessage = {
         sessionId,
         content: data.reply,
@@ -199,15 +194,7 @@ export const ChatInterface = () => {
       };
       setLoading(false);
 
-      await Promise.all([
-        addSessionData({
-          sessionId,
-          locations: data.locations,
-          activities: data.activities,
-          accommodations: data.accommodations,
-        }),
-        addMessageMutation.mutateAsync(aiMessage),
-      ]);
+      await Promise.all([addMessageMutation.mutateAsync(aiMessage)]);
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);

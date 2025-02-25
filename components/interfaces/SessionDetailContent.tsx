@@ -3,13 +3,13 @@
 import { useSelector, useDispatch } from "react-redux";
 import {
   getActiveSessionId,
-  getActiveSessionLocations,
   getSessionDetailView,
   SessionDetailView,
 } from "@/redux/sessionSlice";
 import { View, setCurrentView } from "@/redux/viewSlice";
 import { setSelectedLocation } from "@/redux/mapSlice";
-import { useGetSessionData } from "@/hooks/useSessions";
+import { useGetLocations } from "@/hooks/useLocations";
+import { useGetLocationData } from "@/hooks/useLocationData";
 
 const bgColors = [
   "bg-blue-100",
@@ -23,9 +23,10 @@ const bgColors = [
 export const SessionDetailContent = () => {
   const dispatch = useDispatch();
   const currentView = useSelector(getSessionDetailView);
-  const activeSessionLocations = useSelector(getActiveSessionLocations);
+  //const activeSessionLocations = useSelector(getActiveSessionLocations);
   const activeSessionId = useSelector(getActiveSessionId);
-  const sessionData = useGetSessionData(activeSessionId ?? undefined);
+  const locations = useGetLocations(activeSessionId);
+  const locationData = useGetLocationData(activeSessionId);
 
   const renderContent = () => {
     switch (currentView) {
@@ -33,7 +34,7 @@ export const SessionDetailContent = () => {
         return (
           <div className="p-4">
             <div className="space-y-2">
-              {activeSessionLocations?.map((location, index) => {
+              {locations.data?.map((location, index) => {
                 return (
                   <div
                     key={index}
@@ -46,13 +47,12 @@ export const SessionDetailContent = () => {
                     }}
                   >
                     <div className="flex-1">
-                      <h4 className="font-medium">{location}</h4>
+                      <h4 className="font-medium">{location.name}</h4>
                     </div>
                   </div>
                 );
               })}
-              {(!activeSessionLocations ||
-                activeSessionLocations.length === 0) && (
+              {(!locations || locations.data?.length === 0) && (
                 <div className="text-sm text-muted-foreground italic">
                   No locations added yet
                 </div>
@@ -65,7 +65,7 @@ export const SessionDetailContent = () => {
           <div className="p-4">
             <h3 className="font-semibold mb-2">Activities</h3>
             <div className="space-y-2">
-              {sessionData.data
+              {locationData.data
                 ?.filter((item) => item.type === "activity")
                 .map((activity, index) => (
                   <div
@@ -87,8 +87,8 @@ export const SessionDetailContent = () => {
                     </div>
                   </div>
                 ))}
-              {(!sessionData.data ||
-                sessionData.data.filter((item) => item.type === "activity")
+              {(!locationData.data ||
+                locationData.data.filter((item) => item.type === "activity")
                   .length === 0) && (
                 <div className="text-sm text-muted-foreground italic">
                   No activities added yet
@@ -102,7 +102,7 @@ export const SessionDetailContent = () => {
           <div className="p-4">
             <h3 className="font-semibold mb-2">Accommodations</h3>
             <div className="space-y-2">
-              {sessionData.data
+              {locationData.data
                 ?.filter((item) => item.type === "accommodation")
                 .map((accommodation, index) => (
                   <div
@@ -124,9 +124,10 @@ export const SessionDetailContent = () => {
                     </div>
                   </div>
                 ))}
-              {(!sessionData.data ||
-                sessionData.data.filter((item) => item.type === "accommodation")
-                  .length === 0) && (
+              {(!locationData.data ||
+                locationData.data.filter(
+                  (item) => item.type === "accommodation"
+                ).length === 0) && (
                 <div className="text-sm text-muted-foreground italic">
                   No accommodations added yet
                 </div>

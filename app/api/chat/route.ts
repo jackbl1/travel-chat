@@ -3,7 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 import { requireEnvVar } from "../utils";
 import { google } from "googleapis";
 import { ChatAnthropic } from "@langchain/anthropic";
-import { HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
+import {
+  HumanMessage,
+  AIMessage,
+  ToolMessage,
+  MessageContentComplex,
+  MessageContent,
+} from "@langchain/core/messages";
 import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 import {
@@ -11,7 +17,10 @@ import {
   LocationDataInterface,
   LocationDataInterfaceDB,
   LocationInterface,
+  MessageInterface,
 } from "@/lib/types";
+import Anthropic from "@anthropic-ai/sdk";
+import { MessageParam } from "@anthropic-ai/sdk/resources/index.mjs";
 
 // Supabase client initializations
 const supabase = createClient(
@@ -31,9 +40,10 @@ async function performGoogleSearch(query: string): Promise<PlaceInfo[]> {
       num: 5,
     });
 
-    console.log("made google search successfully");
-    console.log(query);
-    console.log(searchResponse);
+    // TODO: improve search here, google is bad
+    //console.log("made google search successfully");
+    //console.log(query);
+    //console.log(searchResponse);
 
     return (searchResponse.data.items || []).map((item) => ({
       name: item.title,
@@ -46,26 +56,26 @@ async function performGoogleSearch(query: string): Promise<PlaceInfo[]> {
 }
 
 // LangChain tool definitions
-const locationTool = tool(
-  async ({ destination }) => {
-    const formattedResults = await performGoogleSearch(
-      `best tourist attractions points of interest in ${destination} travel guide`
-    );
+// const locationTool = tool(
+//   async ({ destination }) => {
+//     const formattedResults = await performGoogleSearch(
+//       `best tourist attractions points of interest in ${destination} travel guide`
+//     );
 
-    return JSON.stringify({
-      location: destination,
-      attractions: formattedResults,
-    });
-  },
-  {
-    name: "location",
-    description:
-      "Get a list of recommended locations to visit at the destination",
-    schema: z.object({
-      destination: z.string().describe("The main destination to explore"),
-    }),
-  }
-);
+//     return JSON.stringify({
+//       location: destination,
+//       attractions: formattedResults,
+//     });
+//   },
+//   {
+//     name: "location",
+//     description:
+//       "Get a list of recommended locations to visit at the destination",
+//     schema: z.object({
+//       destination: z.string().describe("The main destination to explore"),
+//     }),
+//   }
+// );
 
 const activityTool = tool(
   async ({ location }) => {
@@ -107,7 +117,15 @@ const accommodationsTool = tool(
   }
 );
 
-const tools = [locationTool, activityTool, accommodationsTool];
+const anthropic = new Anthropic({
+  apiKey: requireEnvVar("ANTHROPIC_API_KEY"),
+});
+
+const tools = [
+  //locationTool,
+  activityTool,
+  accommodationsTool,
+];
 
 // Initialize LangChain Anthropic chat model
 const llm = new ChatAnthropic({
@@ -117,6 +135,66 @@ const llm = new ChatAnthropic({
 });
 
 const llmWithTools = llm.bindTools(tools);
+
+function parseLocationResponse(
+  response: MessageContent
+): Partial<LocationInterface>[] {
+  try {
+    // Handle empty responses
+    if (!response) {
+      return [];
+    }
+
+    // Extract the text content from the complex message
+    let textContent = "";
+    if (typeof response === "string") {
+      textContent = response;
+    } else if (Array.isArray(response)) {
+      const textPart = response.find(
+        (part) =>
+          typeof part === "object" && "type" in part && part.type === "text"
+      );
+      if (textPart && "text" in textPart) {
+        textContent = textPart.text;
+      }
+    }
+
+    // Return empty array if no text content or just brackets
+    if (!textContent || textContent === "[]") {
+      return [];
+    }
+
+    // Extract location objects using regex
+    const locationRegex =
+      /{\s*name:\s*([^,]+)\s*,\s*region:\s*([^,]+)\s*,\s*country:\s*([^}]+)\s*}/g;
+    const locations: Partial<LocationInterface>[] = [];
+
+    let match;
+    while ((match = locationRegex.exec(textContent)) !== null) {
+      const [_, name, region, country] = match;
+      if (name && region && country) {
+        locations.push({
+          name: name.trim(),
+          region: region.trim(),
+          country: country.trim(),
+        });
+      }
+    }
+
+    return locations;
+  } catch (error) {
+    console.error("Error parsing location response:", error);
+    console.error("Raw response:", response);
+    return [];
+  }
+}
+
+function parsePreviousMessages(data: MessageInterface[]): MessageParam[] {
+  return data.map((message) => ({
+    role: message.role === "user" ? "user" : "assistant",
+    content: message.content,
+  }));
+}
 
 interface PlaceInfo {
   name: string;
@@ -177,6 +255,43 @@ export async function POST(request: Request) {
 
     // Add the current message
     const messages = [...previousMessages, new HumanMessage(message)];
+
+    const anthropicMessages: MessageParam[] = parsePreviousMessages(data);
+
+    const locationResponse = await anthropic.messages.create({
+      model: "claude-3-haiku-20240307",
+      max_tokens: 2048,
+      system:
+        "You are an experienced travel agent helping the user to plan a trip. The user will provide you with some information about their trip and you will provider the user with a comma delimited list of locations recommended to visit during their trip. The list of locations will follow the format: [{name: location1, region: region1, country: country1}, {name: location2, region: region2, country: country2}, ...]. Do not include ANY text other than this list of locations. If the user's message is not related to planning a trip, simple return an empty list as such: []",
+      messages: [...anthropicMessages, { role: "user", content: message }],
+    });
+
+    console.log("location response generated", locationResponse);
+
+    const uniqueLocations: LocationInterface[] = parseLocationResponse(
+      locationResponse.content
+    );
+
+    console.log("unique locations", uniqueLocations);
+
+    // Insert locations into the database
+    const { data: insertedLocations, error: insertLocationError } =
+      await supabase
+        .from("locations")
+        .insert(
+          uniqueLocations.map((location) => ({
+            name: location.name,
+            session_id: sessionId,
+            region: location.region,
+            country: location.country,
+          }))
+        )
+        .select();
+
+    if (insertLocationError) {
+      console.error("Error inserting locations:", insertLocationError);
+      throw insertLocationError;
+    }
 
     // Get initial response
     let response = await llmWithTools.invoke(messages, {
@@ -309,32 +424,20 @@ After calling all of these tools to gather context, send the user a full itinera
     await supabase.from("messages").insert(messagesToSave);
 
     // Create session data objects for locations, activities, and accommodations
-    const sessionDataToInsert: Omit<
-      SessionDataInterfaceDB,
-      "session_data_id"
+    const locationDataToInsert: Omit<
+      LocationDataInterfaceDB,
+      "location_data_id"
     >[] = [];
     const timestamp = new Date().toISOString();
-
-    // Process locations
-    const uniqueLocations = [...new Set(toolData.locations)];
-    for (const location of uniqueLocations) {
-      sessionDataToInsert.push({
-        session_id: sessionId,
-        name: location,
-        url: "", // Locations don't have URLs in our current implementation
-        type: SessionDataType.LOCATION,
-        created_at: timestamp,
-      });
-    }
 
     // Process activities
     for (const activities of Object.values(toolData.activities)) {
       for (const activity of activities) {
-        sessionDataToInsert.push({
+        locationDataToInsert.push({
           session_id: sessionId,
           name: activity.name,
           url: activity.url,
-          type: SessionDataType.ACTIVITY,
+          type: LocationDataType.ACTIVITY,
           created_at: timestamp,
         });
       }
@@ -343,30 +446,33 @@ After calling all of these tools to gather context, send the user a full itinera
     // Process accommodations
     for (const accommodations of Object.values(toolData.accommodations)) {
       for (const accommodation of accommodations) {
-        sessionDataToInsert.push({
+        locationDataToInsert.push({
           session_id: sessionId,
           name: accommodation.name,
           url: accommodation.url,
-          type: SessionDataType.ACCOMMODATION,
+          type: LocationDataType.ACCOMMODATION,
           created_at: timestamp,
         });
       }
     }
 
-    // Insert all session data into the database
-    const { data: insertedSessionData, error: insertError } = await supabase
-      .from("session_data")
-      .insert(sessionDataToInsert)
-      .select();
+    console.log("location data to insert:", locationDataToInsert);
 
-    if (insertError) {
-      console.error("Error inserting session data:", insertError);
-      throw insertError;
+    // Insert all session data into the database
+    const { data: insertedLocationData, error: insertDataError } =
+      await supabase
+        .from("location_data")
+        .insert(locationDataToInsert)
+        .select();
+
+    if (insertDataError) {
+      console.error("Error inserting session data:", insertDataError);
+      throw insertDataError;
     }
 
     // Transform the inserted data to match SessionDataInterface
-    const transformedSessionData = insertedSessionData.map((item) => ({
-      sessionDataId: item.session_data_id,
+    const transformedLocationData = insertedLocationData.map((item) => ({
+      locationDataId: item.location_data_id,
       sessionId: item.session_id,
       name: item.name,
       url: item.url,
@@ -375,12 +481,9 @@ After calling all of these tools to gather context, send the user a full itinera
     }));
 
     // Group the transformed data by type for the response
-    const sessionData = transformedSessionData.reduce(
+    const returnData = transformedLocationData.reduce(
       (acc, item) => {
         switch (item.type) {
-          case LocationDataType.LOCATION:
-            acc.locations = [...(acc.locations || []), item];
-            break;
           case LocationDataType.ACTIVITY:
             acc.activities = [...(acc.activities || []), item];
             break;
@@ -390,16 +493,16 @@ After calling all of these tools to gather context, send the user a full itinera
         }
         return acc;
       },
-      { locations: [], activities: [], accommodations: [] }
+      { activities: [], accommodations: [] }
     );
 
     //TODO: use supabase to store session data
 
     return NextResponse.json({
       reply: itinerary,
-      locations: sessionData.locations,
-      activities: sessionData.activities,
-      accommodations: sessionData.accommodations,
+      locations: insertedLocations,
+      activities: returnData.activities,
+      accommodations: returnData.accommodations,
     });
   } catch (error) {
     console.error("Error:", error);
