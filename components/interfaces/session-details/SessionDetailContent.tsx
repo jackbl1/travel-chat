@@ -1,65 +1,24 @@
 "use client";
 
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import {
   getActiveSessionId,
   getSessionDetailView,
   SessionDetailView,
 } from "@/redux/sessionSlice";
-import { View, setCurrentView } from "@/redux/viewSlice";
-import { setSelectedLocation } from "@/redux/mapSlice";
-import { useGetLocations } from "@/hooks/useLocations";
 import { useGetLocationData } from "@/hooks/useLocationData";
-
-const bgColors = [
-  "bg-blue-100",
-  "bg-green-100",
-  "bg-yellow-100",
-  "bg-red-100",
-  "bg-purple-100",
-  "bg-orange-100",
-];
+import { bgColors } from "@/lib/constants";
+import LocationsList from "./LocationsList";
 
 export const SessionDetailContent = () => {
-  const dispatch = useDispatch();
   const currentView = useSelector(getSessionDetailView);
-  //const activeSessionLocations = useSelector(getActiveSessionLocations);
   const activeSessionId = useSelector(getActiveSessionId);
-  const locations = useGetLocations(activeSessionId);
   const locationData = useGetLocationData(activeSessionId);
 
   const renderContent = () => {
     switch (currentView) {
       case SessionDetailView.Locations:
-        return (
-          <div className="p-4">
-            <div className="space-y-2">
-              {locations.data?.map((location, index) => {
-                return (
-                  <div
-                    key={index}
-                    className={`flex items-center py-2 px-3 rounded-lg border w-fit ${
-                      bgColors[index % bgColors.length]
-                    } text-card-foreground shadow-sm hover:shadow-md transition-shadow cursor-pointer`}
-                    onClick={() => {
-                      dispatch(setCurrentView(View.Map));
-                      dispatch(setSelectedLocation(location));
-                    }}
-                  >
-                    <div className="flex-1">
-                      <h4 className="font-medium">{location.name}</h4>
-                    </div>
-                  </div>
-                );
-              })}
-              {(!locations || locations.data?.length === 0) && (
-                <div className="text-sm text-muted-foreground italic">
-                  No locations added yet
-                </div>
-              )}
-            </div>
-          </div>
-        );
+        return <LocationsList />;
       case SessionDetailView.Activities:
         return (
           <div className="p-4">

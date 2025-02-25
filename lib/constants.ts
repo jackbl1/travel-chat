@@ -32,3 +32,12 @@ export const defaultMessageContent = [
   "Find peace in Tuscany's rolling hills.",
   "Discover the wild beauty of Scotland's Highlands.",
 ];
+
+export const bgColors = [
+  "bg-blue-100",
+  "bg-green-100",
+  "bg-yellow-100",
+  "bg-red-100",
+  "bg-purple-100",
+  "bg-orange-100",
+];

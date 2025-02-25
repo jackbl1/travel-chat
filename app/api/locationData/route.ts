@@ -13,20 +13,29 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get("sessionId");
+    const locationId = searchParams.get("locationId");
 
-    if (!sessionId) {
+    if (!sessionId && !locationId) {
       return NextResponse.json(
-        { error: "Session ID is required" },
+        { error: "Either Session ID or Location ID is required" },
         { status: 400 }
       );
     }
 
-    // Query location data from Supabase
-    const { data, error } = await supabase
-      .from("location_data")
-      .select("*")
-      .eq("session_id", sessionId)
-      .order("created_at", { ascending: true });
+    // Initialize query
+    let query = supabase.from("location_data").select("*");
+
+    // Apply the appropriate filter based on the provided ID
+    if (sessionId) {
+      query = query.eq("session_id", sessionId);
+    } else if (locationId) {
+      query = query.eq("location_id", locationId);
+    }
+
+    // Execute query with ordering
+    const { data, error } = await query.order("created_at", {
+      ascending: true,
+    });
 
     if (error) {
       console.error("Error fetching location data:", error);
@@ -36,6 +45,7 @@ export async function GET(request: Request) {
     // Transform the data to match LocationDataInterface
     const locationData: LocationDataInterface[] = data.map((item) => ({
       locationDataId: item.location_data_id,
+      locationId: item.location_id,
       sessionId: item.session_id,
       name: item.name,
       url: item.url,

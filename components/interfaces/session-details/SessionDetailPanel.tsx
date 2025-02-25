@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 import { SessionDetailContent } from "./SessionDetailContent";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -12,7 +12,7 @@ import {
   setSessionDetailView,
 } from "@/redux/sessionSlice";
 import { useState, useRef, useEffect } from "react";
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 import { useUpdateSession } from "@/hooks/useSessions";
 import { cn } from "@/lib/utils";
 

@@ -3,7 +3,20 @@ import { apiRoutes } from "../lib/api-routes";
 import { LocationDataInterface } from "@/lib/types";
 import axios from "axios";
 
-export const useGetLocationData = (sessionId?: string | null) => {
+export const useGetLocationData = (locationId?: string | null) => {
+  return useQuery({
+    queryKey: ["locationData", locationId],
+    queryFn: async (): Promise<Array<LocationDataInterface>> => {
+      const response = await fetch(
+        `${apiRoutes.locationData}?locationId=${locationId}`
+      );
+      return await response.json();
+    },
+    enabled: !!locationId,
+  });
+};
+
+export const useGetLocationDataBySessionId = (sessionId?: string | null) => {
   return useQuery({
     queryKey: ["locationData", sessionId],
     queryFn: async (): Promise<Array<LocationDataInterface>> => {

@@ -10,7 +10,6 @@ export type LatLongType = {
 };
 
 export enum LocationDataType {
-  LOCATION = "location",
   ACTIVITY = "activity",
   ACCOMMODATION = "accommodation",
 }

@@ -16,11 +16,7 @@ export async function POST(
 ) {
   try {
     const { sessionId } = params;
-    const {
-      locations = [],
-      activities = [],
-      accommodations = [],
-    } = await request.json();
+    const { activities = [], accommodations = [] } = await request.json();
 
     // Helper function to create full LocationData objects
     const createLocationData = (
@@ -29,6 +25,7 @@ export async function POST(
     ): LocationDataInterface[] => {
       return items.map((item) => ({
         locationDataId: uuidv4(),
+        locationId: item.locationId || "",
         sessionId,
         name: item.name || "",
         url: item.url || "",
@@ -39,7 +36,6 @@ export async function POST(
 
     // Create full LocationData objects for each type
     const locationData = [
-      ...createLocationData(locations, LocationDataType.LOCATION),
       ...createLocationData(activities, LocationDataType.ACTIVITY),
       ...createLocationData(accommodations, LocationDataType.ACCOMMODATION),
     ];

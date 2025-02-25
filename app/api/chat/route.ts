@@ -271,85 +271,130 @@ export async function POST(request: Request) {
 
     // Process each location sequentially
     for (const location of insertedLocations) {
-      console.log("processing location", location);
-      const locationName = `${location.name}, ${location.region}, ${location.country}`;
+      try {
+        console.log("processing location", location);
+        const locationName = `${location.name}, ${location.region}, ${location.country}`;
 
-      // Generate activities for this location
-      const activityResponse = await activityTool.invoke({
-        location: locationName,
-      });
-      const activityData = JSON.parse(activityResponse).activities || [];
+        // Generate activities for this location
+        let activityData: SearchResult[] = [];
+        try {
+          const activityResponse = await activityTool.invoke({
+            location: locationName,
+          });
+          activityData = JSON.parse(activityResponse).activities || [];
+        } catch (error) {
+          console.error(
+            `Error generating activities for ${locationName}:`,
+            error
+          );
+          // Continue with empty activities rather than failing
+        }
 
-      // Generate accommodations for this location
-      const accommodationResponse = await accommodationsTool.invoke({
-        location: locationName,
-      });
-      const accommodationData =
-        JSON.parse(accommodationResponse).accommodations || [];
+        // Generate accommodations for this location
+        let accommodationData: SearchResult[] = [];
+        try {
+          const accommodationResponse = await accommodationsTool.invoke({
+            location: locationName,
+          });
+          accommodationData =
+            JSON.parse(accommodationResponse).accommodations || [];
+        } catch (error) {
+          console.error(
+            `Error generating accommodations for ${locationName}:`,
+            error
+          );
+          // Continue with empty accommodations rather than failing
+        }
 
-      // Add activities to database entries
-      activityData.forEach((activity: SearchResult) => {
-        locationDataToInsert.push({
-          location_id: location.location_id,
-          session_id: sessionId,
-          name: activity.name,
-          url: activity.url,
-          type: LocationDataType.ACTIVITY,
-          created_at: timestamp,
+        // Add activities to database entries
+        activityData.forEach((activity: SearchResult) => {
+          if (activity.name && activity.url) {
+            locationDataToInsert.push({
+              location_id: location.location_id,
+              session_id: sessionId,
+              name: activity.name,
+              url: activity.url,
+              type: LocationDataType.ACTIVITY,
+              created_at: timestamp,
+            });
+          }
         });
-      });
 
-      // Add accommodations to database entries
-      accommodationData.forEach((accommodation: SearchResult) => {
-        locationDataToInsert.push({
-          location_id: location.location_id,
-          session_id: sessionId,
-          name: accommodation.name,
-          url: accommodation.url,
-          type: LocationDataType.ACCOMMODATION,
-          created_at: timestamp,
+        // Add accommodations to database entries
+        accommodationData.forEach((accommodation: SearchResult) => {
+          if (accommodation.name && accommodation.url) {
+            locationDataToInsert.push({
+              location_id: location.location_id,
+              session_id: sessionId,
+              name: accommodation.name,
+              url: accommodation.url,
+              type: LocationDataType.ACCOMMODATION,
+              created_at: timestamp,
+            });
+          }
         });
-      });
+      } catch (error) {
+        console.error(`Error processing location ${location.name}:`, error);
+        // Continue to next location rather than failing the entire request
+        continue;
+      }
     }
 
-    // Insert all location data into the database
-    const { data: insertedLocationData, error: insertDataError } =
-      await supabase
-        .from("location_data")
-        .insert(locationDataToInsert)
-        .select();
+    let insertedLocationData = [];
+    if (locationDataToInsert.length > 0) {
+      try {
+        // Insert all location data into the database
+        const { data, error: insertDataError } = await supabase
+          .from("location_data")
+          .insert(locationDataToInsert)
+          .select();
 
-    if (insertDataError) {
-      console.error("Error inserting location data:", insertDataError);
-      throw insertDataError;
+        if (insertDataError) {
+          console.error("Error inserting location data:", insertDataError);
+          // Continue with empty location data rather than failing
+        } else {
+          insertedLocationData = data;
+        }
+      } catch (error) {
+        console.error("Error during location data insertion:", error);
+        // Continue with empty location data rather than failing
+      }
     }
 
     // Generate final itinerary using Claude
-    const finalResponse = await anthropic.messages.create({
-      model: "claude-3-haiku-20240307",
-      max_tokens: 2048,
-      system:
-        "You are an experienced travel agent. Create a detailed day-by-day itinerary based on the locations, activities, and accommodations provided. Make it engaging and well-organized.",
-      messages: [
-        ...anthropicMessages,
-        {
-          role: "user",
-          content: `Create a comprehensive travel itinerary for the following locations based on the top activities and accommodations found in the following search results:\n\n${JSON.stringify(
-            {
-              locations: insertedLocations,
-              locationData: insertedLocationData,
-            },
-            null,
-            2
-          )}`,
-        },
-      ],
-    });
+    let itinerary = "";
+    try {
+      const finalResponse = await anthropic.messages.create({
+        model: "claude-3-haiku-20240307",
+        max_tokens: 2048,
+        system:
+          "You are an experienced travel agent. Create a detailed day-by-day itinerary based on the locations, activities, and accommodations provided. If no activities or accommodations are available, focus on the locations and suggest general activities. Make it engaging and well-organized.",
+        messages: [
+          ...anthropicMessages,
+          {
+            role: "user",
+            content: `Create a comprehensive travel itinerary for the following locations based on the top activities and accommodations found in the following search results:\n\n${JSON.stringify(
+              {
+                locations: insertedLocations,
+                locationData: insertedLocationData,
+              },
+              null,
+              2
+            )}`,
+          },
+        ],
+      });
 
-    const itinerary = finalResponse.content[0].text;
+      itinerary = finalResponse.content[0].text;
+    } catch (error) {
+      console.error("Error generating itinerary:", error);
+      // Provide a basic response if itinerary generation fails
+      itinerary = `Thank you for your travel request! I've identified ${insertedLocations.length} locations for your trip. However, I encountered some issues while generating the detailed itinerary. Please try again or modify your request.`;
+    }
 
     return NextResponse.json({
       reply: itinerary,
+      success: true,
     });
   } catch (error) {
     console.error("Error:", error);

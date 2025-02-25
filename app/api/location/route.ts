@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { requireEnvVar } from "../utils";
+import { requireEnvVar, transformKeys } from "../utils";
 
 // Supabase client initializations
 const supabase = createClient(
@@ -28,7 +28,9 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    const formattedResults = transformKeys(data);
+
+    return NextResponse.json(formattedResults);
   } catch (error) {
     console.error("Error fetching locations:", error);
     return NextResponse.json(
@@ -66,7 +68,9 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json(data);
+    const formattedResults = transformKeys(data);
+
+    return NextResponse.json(formattedResults);
   } catch (error) {
     console.error("Error creating location:", error);
     return NextResponse.json(

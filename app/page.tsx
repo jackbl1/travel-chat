@@ -1,6 +1,6 @@
 import { InterfaceWindow } from "@/components/interfaces/InterfaceWindow";
 import PageLayout from "./page-layout";
-import { SessionDetailPanel } from "@/components/interfaces/SessionDetailPanel";
+import { SessionDetailPanel } from "@/components/interfaces/session-details/SessionDetailPanel";
 import HeaderAuth from "@/components/header-auth";
 import { NavPanel } from "@/components/interfaces/NavPanel";
 
