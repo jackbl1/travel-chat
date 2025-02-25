@@ -22,6 +22,7 @@ import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
 import { ChatMessages, ErrorMessage, LoadingMessage } from "./ChatMessages";
 import { defaultMessageContent } from "@/lib/constants";
+import { useGetLocations } from "@/hooks/useLocations";
 
 const getRandomDefaultMessage = (): MessageInterface => ({
   messageId: "default",
@@ -56,6 +57,7 @@ export const ChatInterface = () => {
     isLoading: messagesLoading,
     isSuccess: messagesSuccess,
   } = useGetMessages(activeSessionId);
+  const { refetch: refetchLocations } = useGetLocations(activeSessionId);
   const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
@@ -201,6 +203,7 @@ export const ChatInterface = () => {
     } finally {
       // Update the session with the latest details that the agent has generated
       await refetchSessions();
+      await refetchLocations();
     }
   };
 

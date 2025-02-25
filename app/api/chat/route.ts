@@ -21,6 +21,7 @@ import {
 } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/index.mjs";
+import Exa from "exa-js";
 
 // Supabase client initializations
 const supabase = createClient(
@@ -30,15 +31,13 @@ const supabase = createClient(
 
 const googleSearch = google.customsearch("v1");
 
-type GoogleSearchResult = {
+type SearchResult = {
   name: string;
   url: string;
 };
 
 // Helper function for Google Search API calls
-async function performGoogleSearch(
-  query: string
-): Promise<GoogleSearchResult[]> {
+async function performGoogleSearch(query: string): Promise<SearchResult[]> {
   try {
     const searchResponse = await googleSearch.cse.list({
       cx: requireEnvVar("GOOGLE_SEARCH_ENGINE_ID"),
@@ -57,11 +56,26 @@ async function performGoogleSearch(
   }
 }
 
+const exa = new Exa(requireEnvVar("EXA_API_KEY"));
+
+const performExaSearch = async (query: string): Promise<SearchResult[]> => {
+  const result = await exa.searchAndContents(query, {
+    text: true,
+    type: "neural",
+    useAutoprompt: false,
+    numResults: 5,
+  });
+  return result.results.map((result) => ({
+    name: result.title || "",
+    url: result.url || "",
+  }));
+};
+
 // LangChain tool definitions
 const activityTool = tool(
   async ({ location }) => {
-    const formattedResults = await performGoogleSearch(
-      `The best activity to do in ${location}`
+    const formattedResults = await performExaSearch(
+      `The best activity to do in ${location} is: `
     );
 
     return JSON.stringify({
@@ -82,7 +96,7 @@ const activityTool = tool(
 const accommodationsTool = tool(
   async ({ location }) => {
     const formattedResults = await performGoogleSearch(
-      `Top rated hotel in ${location}`
+      `Top rated accommodation in ${location} is: `
     );
 
     return JSON.stringify({
@@ -196,24 +210,24 @@ export async function POST(request: Request) {
     }
 
     // Convert database messages to LangChain messages
-    const previousMessages = data
-      .map((msg) => {
-        if (msg.role === "user") {
-          return new HumanMessage(msg.content);
-        } else if (msg.role === "assistant") {
-          return new AIMessage(msg.content);
-        } else if (msg.role === "tool") {
-          return new ToolMessage({
-            content: msg.content,
-            tool_call_id: msg.tool_call_id,
-            name: msg.name,
-          });
-        }
-      })
-      .filter(Boolean);
+    // const previousMessages = data
+    //   .map((msg) => {
+    //     if (msg.role === "user") {
+    //       return new HumanMessage(msg.content);
+    //     } else if (msg.role === "assistant") {
+    //       return new AIMessage(msg.content);
+    //     } else if (msg.role === "tool") {
+    //       return new ToolMessage({
+    //         content: msg.content,
+    //         tool_call_id: msg.tool_call_id,
+    //         name: msg.name,
+    //       });
+    //     }
+    //   })
+    //   .filter(Boolean);
 
     // Add the current message
-    const messages = [...previousMessages, new HumanMessage(message)];
+    //const messages = [...previousMessages, new HumanMessage(message)];
 
     const anthropicMessages: MessageParam[] = parsePreviousMessages(data);
 
@@ -225,13 +239,9 @@ export async function POST(request: Request) {
       messages: [...anthropicMessages, { role: "user", content: message }],
     });
 
-    console.log("location response generated", locationResponse);
-
     const uniqueLocations: Partial<LocationInterface>[] = parseLocationResponse(
       locationResponse.content
     );
-
-    console.log("unique locations", uniqueLocations);
 
     // Insert locations into the database
     const { data: insertedLocations, error: insertLocationError } =
@@ -261,6 +271,7 @@ export async function POST(request: Request) {
 
     // Process each location sequentially
     for (const location of insertedLocations) {
+      console.log("processing location", location);
       const locationName = `${location.name}, ${location.region}, ${location.country}`;
 
       // Generate activities for this location
@@ -269,8 +280,6 @@ export async function POST(request: Request) {
       });
       const activityData = JSON.parse(activityResponse).activities || [];
 
-      console.log("generated activity data", activityData);
-
       // Generate accommodations for this location
       const accommodationResponse = await accommodationsTool.invoke({
         location: locationName,
@@ -278,29 +287,27 @@ export async function POST(request: Request) {
       const accommodationData =
         JSON.parse(accommodationResponse).accommodations || [];
 
-      console.log("generated accommodation data", accommodationData);
-
       // Add activities to database entries
-      activityData.forEach((activity: GoogleSearchResult) => {
+      activityData.forEach((activity: SearchResult) => {
         locationDataToInsert.push({
+          location_id: location.location_id,
           session_id: sessionId,
           name: activity.name,
           url: activity.url,
           type: LocationDataType.ACTIVITY,
           created_at: timestamp,
-          location_id: location.locationId, // If available from inserted locations
         });
       });
 
       // Add accommodations to database entries
-      accommodationData.forEach((accommodation: GoogleSearchResult) => {
+      accommodationData.forEach((accommodation: SearchResult) => {
         locationDataToInsert.push({
+          location_id: location.location_id,
           session_id: sessionId,
           name: accommodation.name,
           url: accommodation.url,
           type: LocationDataType.ACCOMMODATION,
           created_at: timestamp,
-          location_id: location.locationId, // If available from inserted locations
         });
       });
     }
@@ -327,7 +334,7 @@ export async function POST(request: Request) {
         ...anthropicMessages,
         {
           role: "user",
-          content: `Create a travel itinerary for the following locations and their activities:\n\n${JSON.stringify(
+          content: `Create a comprehensive travel itinerary for the following locations based on the top activities and accommodations found in the following search results:\n\n${JSON.stringify(
             {
               locations: insertedLocations,
               locationData: insertedLocationData,
