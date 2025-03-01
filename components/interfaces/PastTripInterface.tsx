@@ -17,7 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
+import { PastTripCard } from "./PastTripCard";
 
 export const PastTripInterface = () => {
   const activeSessionId = useSelector(getActiveSessionId);
@@ -76,93 +76,65 @@ export const PastTripInterface = () => {
   return (
     <div className="p-4 w-full overflow-y-auto">
       <h1 className="text-2xl font-bold mb-4">Past Trips</h1>
-      <ul className="grid gap-4">
+      <ul className="grid gap-2">
         {sessions?.map((session) => (
-          <li
-            className="flex flex-row gap-x-2 items-start"
-            key={session.sessionId}
-          >
-            <div
-              className={`w-auto rounded-lg shadow-md transition-transform duration-200 transform hover:scale-[102%]
-                ${
-                  session.sessionId == activeSessionId
-                    ? "bg-gray-200 text-gray-700 ring-2 ring-gray-500"
-                    : "bg-gray-200 text-gray-800"
-                }
-                ${
-                  expandedSessionId === session.sessionId ? "bg-gray-300" : ""
-                }`}
-            >
-              <div
-                className="w-full p-4 text-left hover:bg-gray-300 focus:outline-none focus:ring-1 focus:ring-offset-1 focus:ring-gray-500 rounded-lg cursor-pointer"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  dispatch(setActiveSessionId(session.sessionId));
-                  setExpandedSessionId(
-                    expandedSessionId === session.sessionId
-                      ? null
-                      : session.sessionId
-                  );
-                }}
-                aria-label={`View session ${session.name}`}
-              >
-                <div className="flex justify-between items-center gap-x-4">
-                  <span className="font-medium">{session.name}</span>
-                  <div className="flex items-center">
-                    <button
-                      className="p-1 rounded-md hover:bg-gray-400 transition-colors"
-                      onClick={() => {
-                        handleSessionClick(session.sessionId);
-                      }}
-                    >
-                      <ArrowUpRight className="w-5 h-5" />
-                    </button>
-                  </div>
+          <li key={session.sessionId}>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between bg-gray-200 p-4 rounded-lg hover:bg-gray-300 cursor-pointer transition-colors">
+                <button
+                  className="flex-1 text-left font-medium"
+                  onClick={() =>
+                    setExpandedSessionId(
+                      expandedSessionId === session.sessionId
+                        ? null
+                        : session.sessionId
+                    )
+                  }
+                >
+                  {session.name}
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-1.5 hover:bg-gray-400 rounded-full transition-colors"
+                    onClick={() => handleSessionClick(session.sessionId)}
+                  >
+                    <ArrowUpRight className="w-4 h-4" />
+                  </button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        className="p-1.5 text-red-600 hover:bg-red-100 rounded-full transition-colors"
+                        aria-label="Delete session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Are you sure you want to delete this trip?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. All chat history and
+                          saved locations will be permanently deleted.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteSession(session.sessionId)}
+                        >
+                          Delete Trip
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
               {expandedSessionId === session.sessionId && (
-                <div className="px-4 pb-4 border-t border-gray-400 mt-2 pt-2">
-                  <h2 className="text-sm font-semibold mb-2">
-                    Session Details
-                  </h2>
-                  <span className="text-sm text-gray-500 mr-4">
-                    {new Date(session.createdAt).toLocaleDateString()}
-                  </span>
-                  <p className="text-sm text-gray-600">
-                    Locations: {session.locations?.map((loc) => loc).join(", ")}
-                  </p>
-                </div>
+                <PastTripCard session={session} />
               )}
             </div>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <button
-                  className="p-1.5 mt-4 text-red-600 hover:bg-red-100 rounded-full transition-colors"
-                  aria-label="Delete session"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    Are you sure you want to delete this trip?
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. All chat history and saved
-                    locations will be permanently deleted.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleDeleteSession(session.sessionId)}
-                  >
-                    Delete Trip
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </li>
         ))}
       </ul>
