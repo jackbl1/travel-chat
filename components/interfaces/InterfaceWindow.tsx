@@ -7,6 +7,7 @@ import { MapInterface } from "./MapInterface";
 import { PastTripInterface } from "./PastTripInterface";
 import { useSelector } from "react-redux";
 import { getCurrentView, View } from "@/redux/viewSlice";
+import { ItineraryInterface } from "./ItineraryInterface";
 
 export const InterfaceWindow = () => {
   const currentView = useSelector(getCurrentView);
@@ -18,7 +19,7 @@ export const InterfaceWindow = () => {
       case View.CurrentChat:
         return <ChatInterface />;
       case View.Itinerary:
-        return <div>Itinerary Content</div>;
+        return <ItineraryInterface />;
       case View.Map:
         return <MapInterface />;
       case View.PastTrips:

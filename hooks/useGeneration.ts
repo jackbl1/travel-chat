@@ -40,3 +40,16 @@ export const useGenerateSessionName = () => {
     },
   });
 };
+
+export const useGenerateItinerary = () => {
+  return useMutation({
+    mutationFn: async ({
+      sessionId,
+    }: {
+      sessionId: string;
+    }): Promise<string> => {
+      const response = await axios.post(`/api/chat/itinerary`, { sessionId });
+      return response.data.itinerary;
+    },
+  });
+};
