@@ -184,7 +184,27 @@ export async function DELETE(
       );
     }
 
-    // First, delete all related messages
+    // First, delete all LocationDatas for the session
+    const { error: locationDataError } = await supabase
+      .from("location_data")
+      .delete()
+      .eq("session_id", sessionId);
+
+    if (locationDataError) {
+      throw locationDataError;
+    }
+
+    // Then delete all Locations for the session
+    const { error: locationsError } = await supabase
+      .from("locations")
+      .delete()
+      .eq("session_id", sessionId);
+
+    if (locationsError) {
+      throw locationsError;
+    }
+
+    // Delete all related messages
     const { error: messagesError } = await supabase
       .from("messages")
       .delete()
@@ -194,7 +214,7 @@ export async function DELETE(
       throw messagesError;
     }
 
-    // Then delete the session
+    // Finally delete the session
     const { error: sessionError } = await supabase
       .from("sessions")
       .delete()
