@@ -21,7 +21,7 @@ export const SessionDetailContent = () => {
         return <LocationsList />;
       case SessionDetailView.Activities:
         return (
-          <div className="p-4">
+          <div className="p-2">
             <h3 className="font-semibold mb-2">Activities</h3>
             <div className="space-y-2">
               {locationData.data
@@ -58,7 +58,7 @@ export const SessionDetailContent = () => {
         );
       case SessionDetailView.Accommodations:
         return (
-          <div className="p-4">
+          <div className="p-2">
             <h3 className="font-semibold mb-2">Accommodations</h3>
             <div className="space-y-2">
               {locationData.data

@@ -86,9 +86,6 @@ export const ItineraryInterface = () => {
             <h1 className="font-serif text-5xl tracking-widest text-stone-800 mb-4 uppercase leading-tight">
               Travel Itinerary
             </h1>
-            {/* <h1 className="font-playfair text-5xl mb-4 text-stone-800 leading-tight">
-              Your Travel Itinerary
-            </h1> */}
             <div className="font-serif text-stone-500 text-sm tracking-wide">
               A Curated Journey •{" "}
               {new Date().toLocaleDateString("en-US", {
