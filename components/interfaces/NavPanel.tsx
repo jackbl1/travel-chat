@@ -16,10 +16,8 @@ import {
 } from "lucide-react";
 import {
   getActiveSessionName,
-  getActiveSessionLocations,
   getActiveSessionId,
   setActiveSessionName,
-  setActiveSessionLocations,
 } from "@/redux/sessionSlice";
 import { useGetSessions } from "@/hooks/useSessions";
 import { useSupabase } from "@/contexts/SupabaseContext";
@@ -36,7 +34,6 @@ export const NavPanel = () => {
   const currentView = useSelector(getCurrentView);
   const activeSessionId = useSelector(getActiveSessionId);
   const activeSessionName = useSelector(getActiveSessionName);
-  const activeSessionLocations = useSelector(getActiveSessionLocations);
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id);
 
@@ -45,28 +42,16 @@ export const NavPanel = () => {
     // Reset active session details if no active session
     if (!activeSessionId) {
       dispatch(setActiveSessionName(null));
-      dispatch(setActiveSessionLocations(null));
       return;
     }
 
     const activeSession = sessions?.find(
       (session) => session.sessionId === activeSessionId
     );
-    if (
-      activeSession &&
-      (activeSessionName !== activeSession.name ||
-        activeSessionLocations !== activeSession.locations)
-    ) {
+    if (activeSession && activeSessionName !== activeSession.name) {
       dispatch(setActiveSessionName(activeSession.name));
-      dispatch(setActiveSessionLocations(activeSession.locations ?? null));
     }
-  }, [
-    activeSessionId,
-    sessions,
-    dispatch,
-    activeSessionName,
-    activeSessionLocations,
-  ]);
+  }, [activeSessionId, sessions, dispatch, activeSessionName]);
 
   const getNavButtons = () => {
     const buttons: NavButton[] = [
@@ -89,8 +74,6 @@ export const NavPanel = () => {
         label: "Map",
         view: View.Map,
         icon: MapPinned,
-        disabled:
-          !!activeSessionLocations && activeSessionLocations.length === 0,
       },
       {
         label: "Past Trips",

@@ -3,22 +3,28 @@
 import { LocationMap } from "@/components/LocationMap";
 import { useSelector } from "react-redux";
 import { getSelectedLocation } from "@/redux/mapSlice";
-import { getActiveSessionLocations } from "@/redux/sessionSlice";
-import { LocationType } from "@/lib/types";
+import { LocationInterface, LocationType } from "@/lib/types";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { useDispatch } from "react-redux";
 import { Button } from "@/components/ui/button";
 import { Plus, PlaneTakeoff } from "lucide-react";
+import { getActiveSessionId } from "@/redux/sessionSlice";
+import { useGetLocations } from "@/hooks/useLocations";
+
+const parseLocation = (location: LocationInterface) => {
+  return location.name + ", " + location.region + ", " + location.country;
+};
 
 export const MapInterface = () => {
   const dispatch = useDispatch();
   const selectedLocation = useSelector(getSelectedLocation);
-  const activeSessionLocations = useSelector(getActiveSessionLocations);
+  const activeSessionId = useSelector(getActiveSessionId);
+  const { data: locationData } = useGetLocations(activeSessionId);
 
   const locations: LocationType[] =
-    activeSessionLocations?.map((location) => {
+    locationData?.map((location) => {
       return {
-        name: location,
+        name: parseLocation(location),
       };
     }) ?? [];
 
@@ -51,7 +57,9 @@ export const MapInterface = () => {
         <LocationMap
           apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           locations={locations}
-          selectedLocation={selectedLocation}
+          selectedLocation={
+            !!selectedLocation ? parseLocation(selectedLocation) : null
+          }
         />
       </div>
     </div>

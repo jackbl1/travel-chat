@@ -9,14 +9,12 @@ export enum SessionDetailView {
 interface SessionState {
   activeSessionId: string | null;
   activeSessionName: string | null;
-  activeSessionLocations: string[] | null;
   sessionDetailView: SessionDetailView;
 }
 
 const initialState: SessionState = {
   activeSessionId: null,
   activeSessionName: null,
-  activeSessionLocations: null,
   sessionDetailView: SessionDetailView.Locations,
 };
 
@@ -29,9 +27,6 @@ const sessionSlice = createSlice({
     },
     setActiveSessionName(state, action: PayloadAction<string | null>) {
       state.activeSessionName = action.payload;
-    },
-    setActiveSessionLocations(state, action: PayloadAction<string[] | null>) {
-      state.activeSessionLocations = action.payload;
     },
     setSessionDetailView(state, action: PayloadAction<SessionDetailView>) {
       state.sessionDetailView = action.payload;
@@ -48,10 +43,6 @@ export const getActiveSessionName = (state: { session: SessionState }) => {
   return state.session.activeSessionName;
 };
 
-export const getActiveSessionLocations = (state: { session: SessionState }) => {
-  return state.session.activeSessionLocations;
-};
-
 export const getSessionDetailView = (state: { session: SessionState }) => {
   return state.session.sessionDetailView;
 };
@@ -59,7 +50,6 @@ export const getSessionDetailView = (state: { session: SessionState }) => {
 export const {
   setActiveSessionId,
   setActiveSessionName,
-  setActiveSessionLocations,
   setSessionDetailView,
   resetSession,
 } = sessionSlice.actions;

@@ -3,7 +3,7 @@ import { RootState } from "./store";
 import { LocationInterface } from "@/lib/types";
 
 interface MapState {
-  selectedLocation: string | LocationInterface | null;
+  selectedLocation: LocationInterface | null;
 }
 
 const initialState: MapState = {
@@ -16,7 +16,7 @@ export const mapSlice = createSlice({
   reducers: {
     setSelectedLocation: (
       state,
-      action: PayloadAction<string | LocationInterface | null>
+      action: PayloadAction<LocationInterface | null>
     ) => {
       state.selectedLocation = action.payload;
     },
