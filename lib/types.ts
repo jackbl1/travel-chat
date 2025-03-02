@@ -40,6 +40,7 @@ export type LocationInterface = {
   name: string;
   region: string;
   country: string;
+  description: string;
   createdAt: string;
 };
 
@@ -49,6 +50,7 @@ export type LocationInterfaceDB = {
   name: string;
   region: string;
   country: string;
+  description: string;
   created_at: string;
 };
 

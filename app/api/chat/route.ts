@@ -18,6 +18,7 @@ import {
   LocationDataInterfaceDB,
   LocationInterface,
   MessageInterface,
+  LocationInterfaceDB,
 } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/index.mjs";
@@ -58,24 +59,70 @@ async function performGoogleSearch(query: string): Promise<SearchResult[]> {
 
 const exa = new Exa(requireEnvVar("EXA_API_KEY"));
 
-const performExaSearch = async (query: string): Promise<SearchResult[]> => {
-  const result = await exa.searchAndContents(query, {
-    text: true,
-    type: "neural",
-    useAutoprompt: false,
-    numResults: 5,
-  });
-  return result.results.map((result) => ({
-    name: result.title || "",
-    url: result.url || "",
-  }));
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const performExaSearch = async (
+  query: string,
+  retries = 3,
+  initialDelay = 1000
+): Promise<SearchResult[]> => {
+  try {
+    const result = await exa.search(query, {
+      type: "neural",
+      useAutoprompt: false,
+      numResults: 3,
+    });
+    return result.results.map((result) => ({
+      name: result.title || "",
+      url: result.url || "",
+    }));
+  } catch (error: any) {
+    // Check if it's a rate limit error (429)
+    if (retries > 0) {
+      console.log(
+        `Rate limited by Exa API, retrying in ${initialDelay}ms. Retries left: ${retries}`
+      );
+      await sleep(initialDelay);
+      // Retry with exponential backoff
+      return performExaSearch(query, retries - 1, initialDelay * 2);
+    }
+    // If it's not a rate limit error or we're out of retries, throw the error
+    throw error;
+  }
 };
 
 // LangChain tool definitions
+const withRetry = async <T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelay = 1000
+): Promise<T> => {
+  let lastError;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      if (error?.response?.status === 429 && i < maxRetries - 1) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.log(
+          `Rate limited, retrying in ${delay}ms. Retries left: ${
+            maxRetries - i - 1
+          }`
+        );
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+};
+
 const activityTool = tool(
   async ({ location }) => {
-    const formattedResults = await performExaSearch(
-      `The best activity to do in ${location} is: `
+    const formattedResults = await withRetry(() =>
+      performExaSearch(`The best activity to do in ${location} is: `)
     );
 
     return JSON.stringify({
@@ -95,8 +142,8 @@ const activityTool = tool(
 
 const accommodationsTool = tool(
   async ({ location }) => {
-    const formattedResults = await performGoogleSearch(
-      `Top rated accommodation in ${location} is: `
+    const formattedResults = await withRetry(() =>
+      performExaSearch(`Top rated accommodation in ${location} is: `)
     );
 
     return JSON.stringify({
@@ -235,7 +282,7 @@ export async function POST(request: Request) {
       model: "claude-3-haiku-20240307",
       max_tokens: 2048,
       system:
-        "You are an experienced travel agent helping the user to plan a trip. The user will provide you with some information about their trip and you will provider the user with a comma delimited list of locations recommended to visit during their trip. The list of locations will follow the format: [{name: location1, region: region1, country: country1}, {name: location2, region: region2, country: country2}, ...]. Do not include ANY text other than this list of locations. If the user's message is not related to planning a trip, simple return an empty list as such: []",
+        "You are an experienced travel agent helping the user to plan a trip. The user will provide you with some information about their trip and you will provider the user with a comma delimited list of locations recommended to visit during their trip. The list of locations will follow the format: [{name: location1, region: region1, country: country1, description: description1}, {name: location2, region: region2, country: country2, description: description2}, ...]. Do not include ANY text other than this list of locations. The description field should be an objective and brief 1-sentence description of the location. If the user's message is not related to planning a trip, return an empty list as such: []",
       messages: [...anthropicMessages, { role: "user", content: message }],
     });
 
@@ -253,6 +300,7 @@ export async function POST(request: Request) {
             session_id: sessionId,
             region: location.region,
             country: location.country,
+            description: location.description,
           }))
         )
         .select();
@@ -262,83 +310,62 @@ export async function POST(request: Request) {
       throw insertLocationError;
     }
 
-    // Process each location to generate activities and accommodations
-    const locationDataToInsert: Omit<
-      LocationDataInterfaceDB,
-      "location_data_id"
-    >[] = [];
+    // Process all locations in parallel
     const timestamp = new Date().toISOString();
 
-    // Process each location sequentially
-    for (const location of insertedLocations) {
+    // Helper function to process a single location's data
+    const processLocationData = async (
+      location: Partial<LocationInterfaceDB>
+    ) => {
+      const locationName = `${location.name}, ${location.region}, ${location.country}`;
+
       try {
-        console.log("processing location", location);
-        const locationName = `${location.name}, ${location.region}, ${location.country}`;
+        // Run both API calls in parallel
+        const [activityResponse, accommodationResponse] = await Promise.all([
+          activityTool.invoke({ location: locationName }),
+          accommodationsTool.invoke({ location: locationName }),
+        ]);
 
-        // Generate activities for this location
-        let activityData: SearchResult[] = [];
-        try {
-          const activityResponse = await activityTool.invoke({
-            location: locationName,
-          });
-          activityData = JSON.parse(activityResponse).activities || [];
-        } catch (error) {
-          console.error(
-            `Error generating activities for ${locationName}:`,
-            error
-          );
-          // Continue with empty activities rather than failing
-        }
+        // Parse both responses
+        const activityData = JSON.parse(activityResponse).activities || [];
+        const accommodationData =
+          JSON.parse(accommodationResponse).accommodations || [];
 
-        // Generate accommodations for this location
-        let accommodationData: SearchResult[] = [];
-        try {
-          const accommodationResponse = await accommodationsTool.invoke({
-            location: locationName,
-          });
-          accommodationData =
-            JSON.parse(accommodationResponse).accommodations || [];
-        } catch (error) {
-          console.error(
-            `Error generating accommodations for ${locationName}:`,
-            error
-          );
-          // Continue with empty accommodations rather than failing
-        }
+        // Convert results to database format
+        const locationData: Omit<
+          LocationDataInterfaceDB,
+          "location_data_id"
+        >[] = [
+          ...activityData.map((activity: SearchResult) => ({
+            location_id: location.location_id,
+            session_id: sessionId,
+            name: activity.name,
+            url: activity.url,
+            type: LocationDataType.ACTIVITY,
+            created_at: timestamp,
+          })),
+          ...accommodationData.map((accommodation: SearchResult) => ({
+            location_id: location.location_id,
+            session_id: sessionId,
+            name: accommodation.name,
+            url: accommodation.url,
+            type: LocationDataType.ACCOMMODATION,
+            created_at: timestamp,
+          })),
+        ].filter((item) => item.name && item.url); // Filter out invalid entries
 
-        // Add activities to database entries
-        activityData.forEach((activity: SearchResult) => {
-          if (activity.name && activity.url) {
-            locationDataToInsert.push({
-              location_id: location.location_id,
-              session_id: sessionId,
-              name: activity.name,
-              url: activity.url,
-              type: LocationDataType.ACTIVITY,
-              created_at: timestamp,
-            });
-          }
-        });
-
-        // Add accommodations to database entries
-        accommodationData.forEach((accommodation: SearchResult) => {
-          if (accommodation.name && accommodation.url) {
-            locationDataToInsert.push({
-              location_id: location.location_id,
-              session_id: sessionId,
-              name: accommodation.name,
-              url: accommodation.url,
-              type: LocationDataType.ACCOMMODATION,
-              created_at: timestamp,
-            });
-          }
-        });
+        return locationData;
       } catch (error) {
-        console.error(`Error processing location ${location.name}:`, error);
-        // Continue to next location rather than failing the entire request
-        continue;
+        console.error(`Error processing location ${locationName}:`, error);
+        return []; // Return empty array on error
       }
-    }
+    };
+
+    // Process all locations concurrently and flatten results
+    const locationDataArrays = await Promise.all(
+      insertedLocations.map(processLocationData)
+    );
+    const locationDataToInsert = locationDataArrays.flat();
 
     let insertedLocationData = [];
     if (locationDataToInsert.length > 0) {
@@ -362,18 +389,18 @@ export async function POST(request: Request) {
     }
 
     // Generate final itinerary using Claude
-    let itinerary = "";
+    let reply = "";
     try {
       const finalResponse = await anthropic.messages.create({
         model: "claude-3-haiku-20240307",
         max_tokens: 2048,
         system:
-          "You are an experienced travel agent. Create a detailed day-by-day itinerary based on the locations, activities, and accommodations provided. If no activities or accommodations are available, focus on the locations and suggest general activities. Make it engaging and well-organized.",
+          "You are an experienced travel agent. Your goal is to help the user organize their travel plans with flights, activities and accommodations based on the trip details they request. Make your suggestions engaging and well-organized.",
         messages: [
           ...anthropicMessages,
           {
             role: "user",
-            content: `Create a comprehensive travel itinerary for the following locations based on the top activities and accommodations found in the following search results:\n\n${JSON.stringify(
+            content: `Provide the user with suggestions for how to organize their trip, including flights, activites, and accommodations. This should not be an itinerary, but rather it should outline the top recommendations. The locations, top activities and accommodations can be found in the following search results:\n\n${JSON.stringify(
               {
                 locations: insertedLocations,
                 locationData: insertedLocationData,
@@ -385,15 +412,15 @@ export async function POST(request: Request) {
         ],
       });
 
-      itinerary = finalResponse.content[0].text;
+      reply = finalResponse.content[0].text;
     } catch (error) {
       console.error("Error generating itinerary:", error);
       // Provide a basic response if itinerary generation fails
-      itinerary = `Thank you for your travel request! I've identified ${insertedLocations.length} locations for your trip. However, I encountered some issues while generating the detailed itinerary. Please try again or modify your request.`;
+      reply = `Thank you for your travel request! I've identified ${insertedLocations.length} locations for your trip. However, I encountered some issues while generating the detailed itinerary. Please try again or modify your request.`;
     }
 
     return NextResponse.json({
-      reply: itinerary,
+      reply: reply,
       success: true,
     });
   } catch (error) {
