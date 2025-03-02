@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useGenerateItinerary } from "@/hooks/useGeneration";
 import { Card } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlaneTakeoff, Plus } from "lucide-react";
 import { getActiveSessionId } from "@/redux/sessionSlice";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "../ui/button";
+import { setCurrentView, View } from "@/redux/viewSlice";
 
 export const ItineraryInterface = () => {
+  const dispatch = useDispatch();
   const activeSessionId = useSelector(getActiveSessionId);
   const [savedItinerary, setSavedItinerary] = useState<string>("");
   const {
@@ -74,8 +76,26 @@ export const ItineraryInterface = () => {
     );
   }
 
-  if (!savedItinerary) {
-    return null;
+  if (!savedItinerary || !activeSessionId) {
+    return (
+      <div className="flex flex-col items-center justify-center w-full h-full text-center px-4">
+        <PlaneTakeoff className="h-16 w-16 text-gray-700 mb-4" />
+        <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+          No destinations yet
+        </h2>
+        <p className="text-gray-500 mb-8 max-w-md">
+          Start planning your first adventure! Chat with TravelChat to begin
+          exploring destinations and crafting your perfect itinerary.
+        </p>
+        <Button
+          onClick={() => dispatch(setCurrentView(View.NewChat))}
+          className="flex items-center gap-2 bg-gray-700"
+        >
+          <Plus className="h-4 w-4" />
+          Plan a New Adventure
+        </Button>
+      </div>
+    );
   }
 
   return (
