@@ -92,31 +92,17 @@ export const SessionDetailPanel = () => {
           </Button>
           <Button
             onClick={() => {
-              dispatch(setSessionDetailView(SessionDetailView.Activities));
+              dispatch(setSessionDetailView(SessionDetailView.Customize));
             }}
             variant="ghost"
             size="sm"
             className={
-              currentView === SessionDetailView.Activities
+              currentView === SessionDetailView.Customize
                 ? "bg-accent text-accent-foreground rounded-full"
                 : "rounded-full"
             }
           >
-            Activities
-          </Button>
-          <Button
-            onClick={() => {
-              dispatch(setSessionDetailView(SessionDetailView.Accommodations));
-            }}
-            variant="ghost"
-            size="sm"
-            className={
-              currentView === SessionDetailView.Accommodations
-                ? "bg-accent text-accent-foreground rounded-full"
-                : "rounded-full"
-            }
-          >
-            Accommodations
+            Customize My Trip
           </Button>
         </div>
       </div>

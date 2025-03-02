@@ -2,8 +2,7 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export enum SessionDetailView {
   Locations = "locations",
-  Activities = "activities",
-  Accommodations = "accommodations",
+  Customize = "customize",
 }
 
 interface SessionState {
