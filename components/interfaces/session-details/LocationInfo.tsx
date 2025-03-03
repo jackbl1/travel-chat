@@ -81,9 +81,12 @@ export const LocationInfo = ({
             }`}
           >
             <ScrollArea className="h-[256px]">
+              <div className="text-sm font-medium mb-2">
+                {location.description}
+              </div>
               {activities.length > 0 && (
                 <div className="mb-4">
-                  <h5 className="text-sm font-medium mb-2">Activities</h5>
+                  <h5 className="text-sm font-semibold mb-2">Activities</h5>
                   <div className="space-y-2">
                     {activities.map((activity) => (
                       <a
@@ -91,7 +94,7 @@ export const LocationInfo = ({
                         href={activity.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block p-2 bg-white/50 rounded-md hover:bg-white/80 transition-colors"
+                        className="block font-medium text-sm p-2 bg-white/50 rounded-md hover:bg-white/80 transition-colors"
                       >
                         {activity.name}
                       </a>
@@ -102,7 +105,7 @@ export const LocationInfo = ({
 
               {accommodations.length > 0 && (
                 <div>
-                  <h5 className="text-sm font-medium mb-2">Accommodations</h5>
+                  <h5 className="text-sm font-semibold mb-2">Accommodations</h5>
                   <div className="space-y-2">
                     {accommodations.map((accommodation) => (
                       <a
@@ -110,7 +113,7 @@ export const LocationInfo = ({
                         href={accommodation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block p-2 bg-white/50 rounded-md hover:bg-white/80 transition-colors"
+                        className="block font-medium text-sm p-2 bg-white/50 rounded-md hover:bg-white/80 transition-colors"
                       >
                         {accommodation.name}
                       </a>

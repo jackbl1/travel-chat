@@ -204,17 +204,18 @@ function parseLocationResponse(
 
     // Extract location objects using regex
     const locationRegex =
-      /{\s*name:\s*([^,]+)\s*,\s*region:\s*([^,]+)\s*,\s*country:\s*([^}]+)\s*}/g;
+      /{\s*name:\s*([^,]+)\s*,\s*region:\s*([^,]+)\s*,\s*country:\s*([^,]+)\s*,\s*description:\s*([^}]+)\s*}/g;
     const locations: Partial<LocationInterface>[] = [];
 
     let match;
     while ((match = locationRegex.exec(textContent)) !== null) {
-      const [_, name, region, country] = match;
+      const [_, name, region, country, description] = match;
       if (name && region && country) {
         locations.push({
           name: name.trim(),
           region: region.trim(),
           country: country.trim(),
+          description: description.trim(),
         });
       }
     }
