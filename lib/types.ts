@@ -1,3 +1,9 @@
+import {
+  ContentBlock,
+  Model,
+  Usage,
+} from "@anthropic-ai/sdk/resources/messages/messages.mjs";
+
 export type LocationType = {
   name: string;
   placeholder?: string;
@@ -88,4 +94,15 @@ export type MessageInterfaceDB = {
   user_id: string;
   session_id: string;
   created_at: string;
+};
+
+export type ChatAnthropicResponse = {
+  id: string;
+  content: Array<ContentBlock>;
+  model: Model;
+  role: "assistant";
+  stop_reason: "end_turn" | "max_tokens" | "stop_sequence" | "tool_use" | null;
+  stop_sequence: string | null;
+  type: "message";
+  usage: Usage;
 };

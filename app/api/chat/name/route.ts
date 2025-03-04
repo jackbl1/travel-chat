@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnvVar } from "../../utils";
+import { ChatAnthropicResponse } from "@/lib/types";
+import { TextBlock } from "@anthropic-ai/sdk/resources/index.mjs";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 Chat history:
 ${data?.map((m) => `${m.role}: ${m.content}`).join("\n")}`;
 
-    const response = await anthropic.messages.create({
+    const response: ChatAnthropicResponse = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
       messages: [
         {
@@ -58,7 +60,7 @@ ${data?.map((m) => `${m.role}: ${m.content}`).join("\n")}`;
       temperature: 0.7,
     });
 
-    const sessionName = response.content[0].text.trim();
+    const sessionName = (response.content[0] as TextBlock).text.trim();
 
     return NextResponse.json({ name: sessionName });
   } catch (error) {

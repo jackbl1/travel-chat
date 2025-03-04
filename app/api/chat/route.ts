@@ -19,9 +19,10 @@ import {
   LocationInterface,
   MessageInterface,
   LocationInterfaceDB,
+  ChatAnthropicResponse,
 } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
-import { MessageParam } from "@anthropic-ai/sdk/resources/index.mjs";
+import { MessageParam, TextBlock } from "@anthropic-ai/sdk/resources/index.mjs";
 import Exa from "exa-js";
 import { v4 as uuidv4 } from "uuid";
 
@@ -77,7 +78,7 @@ const performExaSearch = async (
       name: result.title || "",
       url: result.url || "",
     }));
-  } catch (error: any) {
+  } catch (error) {
     // Check if it's a rate limit error (429)
     if (retries > 0) {
       console.log(
@@ -404,28 +405,29 @@ export async function POST(request: Request) {
     // Generate final itinerary using Claude
     let reply = "";
     try {
-      const finalResponse = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 2048,
-        system:
-          "You are an experienced travel agent. Your goal is to help the user organize their travel plans with flights, activities and accommodations based on the trip details they request. Make your suggestions engaging and well-organized.",
-        messages: [
-          ...anthropicMessages,
-          {
-            role: "user",
-            content: `Provide the user with suggestions for how to organize their trip, including flights, activites, and accommodations. This should not be an itinerary, but rather it should outline the top recommendations. The locations, top activities and accommodations can be found in the following search results:\n\n${JSON.stringify(
-              {
-                locations: insertedLocations,
-                locationData: insertedLocationData,
-              },
-              null,
-              2
-            )}`,
-          },
-        ],
-      });
+      const finalResponse: ChatAnthropicResponse =
+        await anthropic.messages.create({
+          model: "claude-3-haiku-20240307",
+          max_tokens: 2048,
+          system:
+            "You are an experienced travel agent. Your goal is to help the user organize their travel plans with flights, activities and accommodations based on the trip details they request. Make your suggestions engaging and well-organized.",
+          messages: [
+            ...anthropicMessages,
+            {
+              role: "user",
+              content: `Provide the user with suggestions for how to organize their trip, including flights, activites, and accommodations. This should not be an itinerary, but rather it should outline the top recommendations. The locations, top activities and accommodations can be found in the following search results:\n\n${JSON.stringify(
+                {
+                  locations: insertedLocations,
+                  locationData: insertedLocationData,
+                },
+                null,
+                2
+              )}`,
+            },
+          ],
+        });
 
-      reply = finalResponse.content[0].text;
+      reply = (finalResponse.content[0] as TextBlock).text;
 
       // Save the agent's response
       const { error: agentMessageError } = await supabase

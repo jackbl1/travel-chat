@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { requireEnvVar, transformKeys } from "../../utils";
@@ -21,10 +21,10 @@ const handleError = (error: Error) => {
 // GET handler by session id
 export async function GET(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = (await params).slug;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -55,10 +55,10 @@ export async function GET(
 // POST handler for adding locations to a session
 export async function POST(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = (await params).slug;
     const body = await request.json();
 
     if (!sessionId) {
@@ -122,10 +122,10 @@ export async function POST(
 // PATCH handler for updating sessions
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = (await params).slug;
     const body = await request.json();
 
     if (!sessionId) {
@@ -172,10 +172,10 @@ export async function PATCH(
 // DELETE handler
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { sessionId: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const sessionId = params.sessionId;
+    const sessionId = (await params).slug;
 
     if (!sessionId) {
       return NextResponse.json(

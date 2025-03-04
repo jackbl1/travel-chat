@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnvVar } from "../utils";
 import { LocationDataInterface } from "@/lib/types";
+import { v4 as uuidv4 } from "uuid";
 
 // Initialize Supabase client
 const supabase = createClient(
@@ -58,6 +59,48 @@ export async function GET(request: Request) {
     console.error("Error processing request:", error);
     return NextResponse.json(
       { error: "Failed to fetch location data" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { locationId, sessionId, name, url, type } = body;
+
+    if (!locationId || !sessionId || !name || !url || !type) {
+      return NextResponse.json(
+        { error: "All fields are required" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("location_data")
+      .insert([
+        {
+          location_data_id: uuidv4(),
+          location_id: locationId,
+          session_id: sessionId,
+          name,
+          url,
+          type,
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Error processing request:", error);
+    return NextResponse.json(
+      { error: "Failed to create location data" },
       { status: 500 }
     );
   }

@@ -35,10 +35,12 @@ export const useAddSession = () => {
         Array<SessionInterface>
       >(["sessions", newSession.userId]);
 
-      // Create a temporary ID for optimistic update
-      const tempSession = {
+      // Create a temporary session that matches SessionInterface
+      const tempSession: SessionInterface = {
         ...newSession,
-        id: `temp-${Date.now()}`,
+        sessionId: `temp-${Date.now()}`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
 
       queryClient.setQueryData<Array<SessionInterface>>(

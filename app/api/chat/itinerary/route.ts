@@ -3,10 +3,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@supabase/supabase-js";
 import { requireEnvVar } from "../../utils";
 import {
+  ChatAnthropicResponse,
   LocationDataInterfaceDB,
   LocationInterfaceDB,
   MessageInterfaceDB,
 } from "@/lib/types";
+import { MessageParam, TextBlock } from "@anthropic-ai/sdk/resources/index.mjs";
 
 const SYSTEM_PROMPT =
   "You are a travel planner that generates itineraries based on user instructions. " +
@@ -91,7 +93,7 @@ export async function POST(request: Request) {
     }
 
     // Format messages and separate location data by type
-    const formattedMessages = messages.map((m) => ({
+    const formattedMessages: MessageParam[] = messages.map((m) => ({
       role: m.role === "user" ? "user" : "assistant",
       content: m.content,
     }));
@@ -101,7 +103,7 @@ export async function POST(request: Request) {
       (l) => l.type === "accommodation"
     );
 
-    const response = await anthropic.messages.create({
+    const response: ChatAnthropicResponse = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
       system: SYSTEM_PROMPT,
       messages: [
@@ -126,13 +128,15 @@ ${accommodations.map((a) => `- ${a.name} in ${a.name}`).join("\n")}`,
       temperature: 0.7,
     });
 
-    if (!response?.content?.[0]?.text) {
+    const textResponse = response?.content?.[0] as TextBlock;
+
+    if (!textResponse?.text) {
       throw new Error(
         "Failed to generate itinerary: Invalid response from Anthropic"
       );
     }
 
-    return NextResponse.json({ itinerary: response.content[0].text });
+    return NextResponse.json({ itinerary: textResponse.text });
   } catch (error) {
     console.error("Error generating itinerary:", error);
     const errorMessage =
