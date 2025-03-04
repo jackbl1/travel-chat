@@ -18,7 +18,7 @@ import {
   useGetSessions,
   useUpdateSession,
 } from "@/hooks/useSessions";
-import { useAddMessage, useGetMessages } from "@/hooks/useMessages";
+import { useGetMessages } from "@/hooks/useMessages";
 import { MessageInterface } from "@/lib/types";
 import { ChatMessages, ErrorMessage, LoadingMessage } from "./ChatMessages";
 import { defaultMessageContent } from "@/lib/constants";
@@ -56,9 +56,9 @@ export const ChatInterface = () => {
     data: messages,
     isLoading: messagesLoading,
     isSuccess: messagesSuccess,
+    refetch: refetchMessages,
   } = useGetMessages(activeSessionId);
   const { refetch: refetchLocations } = useGetLocations(activeSessionId);
-  const addMessageMutation = useAddMessage();
   const addSessionMutation = useAddSession();
   const { mutateAsync: updateSession } = useUpdateSession();
   const chatMutation = useChat();
@@ -139,7 +139,7 @@ export const ChatInterface = () => {
     setError(false);
 
     try {
-      // 1. Create or get session ID
+      // Create or get session ID
       let sessionId = activeSessionId;
       if (!sessionId) {
         const newSession = await addSessionMutation.mutateAsync({
@@ -153,57 +153,27 @@ export const ChatInterface = () => {
         dispatch(setActiveSessionId(newSession.sessionId));
       }
 
-      // 2. Add initial AI message if this is the first message
-      // TODO: also just pass in this initial AI message to the endpoint instead of saving it here
-      if (!firstMessageSent) {
-        const initialAiMessage = {
-          sessionId,
-          content: defaultMessage.content,
-          role: "agent",
-          userId: user.id,
-          createdAt: new Date().toISOString(),
-          messageId: `temp-${Date.now()}`,
-        };
-        await addMessageMutation.mutateAsync(initialAiMessage);
-        setFirstMessageSent(true);
-      }
-
-      // 3. Add user message
-      // TODO: make sure the chat endpoint saves this user message, so no need to save it here
-      const userMessage = {
-        sessionId,
-        content: messageContent,
-        role: "user",
-        userId: user.id,
-        createdAt: new Date().toISOString(),
-        messageId: `temp-${Date.now()}`,
-      };
-      await addMessageMutation.mutateAsync(userMessage);
-
-      // 4. Add AI response
+      // Send message
       const data = await chatMutation.mutateAsync({
         sessionId,
         message: messageContent,
+        systemMessage: !firstMessageSent ? defaultMessage.content : undefined,
       });
 
-      const aiMessage = {
-        sessionId,
-        content: data.reply,
-        role: "agent",
-        userId: user.id,
-        createdAt: new Date().toISOString(),
-        messageId: `temp-${Date.now()}`,
-      };
-      setLoading(false);
+      //TODO: maybe optimistically update with data here
 
-      await Promise.all([addMessageMutation.mutateAsync(aiMessage)]);
+      setLoading(false);
     } catch (error) {
       console.error("Chat error:", error);
       setError(true);
     } finally {
+      if (!firstMessageSent) {
+        setFirstMessageSent(true);
+      }
       // Update the session with the latest details that the agent has generated
       await refetchSessions();
       await refetchLocations();
+      await refetchMessages();
     }
   };
 

@@ -18,11 +18,17 @@ export const useChat = () => {
     mutationFn: async ({
       sessionId,
       message,
+      systemMessage,
     }: {
       sessionId: string;
       message: string;
+      systemMessage?: string;
     }): Promise<ChatResponse> => {
-      const response = await axios.post("/api/chat", { sessionId, message });
+      const response = await axios.post("/api/chat", {
+        sessionId,
+        message,
+        systemMessage,
+      });
       return response.data;
     },
   });

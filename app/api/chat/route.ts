@@ -23,6 +23,7 @@ import {
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam } from "@anthropic-ai/sdk/resources/index.mjs";
 import Exa from "exa-js";
+import { v4 as uuidv4 } from "uuid";
 
 // Supabase client initializations
 const supabase = createClient(
@@ -237,7 +238,8 @@ function parsePreviousMessages(data: MessageInterface[]): MessageParam[] {
 
 export async function POST(request: Request) {
   try {
-    const { sessionId, message } = await request.json();
+    const { sessionId, message, systemMessage } = await request.json();
+    const timestamp = new Date().toISOString();
 
     if (!sessionId) {
       return NextResponse.json(
@@ -247,37 +249,50 @@ export async function POST(request: Request) {
     }
 
     // Fetch previous messages from the database
-    const { data, error } = await supabase
+    const { data: existingMessages, error: messagesError } = await supabase
       .from("messages")
       .select("*")
       .eq("session_id", sessionId)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      throw error;
+    if (messagesError) {
+      throw messagesError;
     }
 
-    // Convert database messages to LangChain messages
-    // const previousMessages = data
-    //   .map((msg) => {
-    //     if (msg.role === "user") {
-    //       return new HumanMessage(msg.content);
-    //     } else if (msg.role === "assistant") {
-    //       return new AIMessage(msg.content);
-    //     } else if (msg.role === "tool") {
-    //       return new ToolMessage({
-    //         content: msg.content,
-    //         tool_call_id: msg.tool_call_id,
-    //         name: msg.name,
-    //       });
-    //     }
-    //   })
-    //   .filter(Boolean);
+    // If this is the first message and we have a system message, save it
+    if (systemMessage && existingMessages.length === 0) {
+      const { error: systemMessageError } = await supabase
+        .from("messages")
+        .insert({
+          message_id: uuidv4(),
+          session_id: sessionId,
+          content: systemMessage,
+          role: "agent",
+          created_at: timestamp,
+        });
 
-    // Add the current message
-    //const messages = [...previousMessages, new HumanMessage(message)];
+      if (systemMessageError) {
+        console.error("Error saving system message:", systemMessageError);
+        throw systemMessageError;
+      }
+    }
 
-    const anthropicMessages: MessageParam[] = parsePreviousMessages(data);
+    // Save the user's message
+    const { error: userMessageError } = await supabase.from("messages").insert({
+      message_id: uuidv4(),
+      session_id: sessionId,
+      content: message,
+      role: "user",
+      created_at: timestamp,
+    });
+
+    if (userMessageError) {
+      console.error("Error saving user message:", userMessageError);
+      throw userMessageError;
+    }
+
+    const anthropicMessages: MessageParam[] =
+      parsePreviousMessages(existingMessages);
 
     const locationResponse = await anthropic.messages.create({
       model: "claude-3-haiku-20240307",
@@ -310,9 +325,6 @@ export async function POST(request: Request) {
       console.error("Error inserting locations:", insertLocationError);
       throw insertLocationError;
     }
-
-    // Process all locations in parallel
-    const timestamp = new Date().toISOString();
 
     // Helper function to process a single location's data
     const processLocationData = async (
@@ -414,10 +426,41 @@ export async function POST(request: Request) {
       });
 
       reply = finalResponse.content[0].text;
+
+      // Save the agent's response
+      const { error: agentMessageError } = await supabase
+        .from("messages")
+        .insert({
+          message_id: uuidv4(),
+          session_id: sessionId,
+          content: reply,
+          role: "agent",
+          created_at: new Date().toISOString(),
+        });
+
+      if (agentMessageError) {
+        console.error("Error saving agent message:", agentMessageError);
+        throw agentMessageError;
+      }
     } catch (error) {
       console.error("Error generating itinerary:", error);
       // Provide a basic response if itinerary generation fails
       reply = `Thank you for your travel request! I've identified ${insertedLocations.length} locations for your trip. However, I encountered some issues while generating the detailed itinerary. Please try again or modify your request.`;
+
+      // Save the error response
+      const { error: errorMessageError } = await supabase
+        .from("messages")
+        .insert({
+          message_id: uuidv4(),
+          session_id: sessionId,
+          content: reply,
+          role: "agent",
+          created_at: new Date().toISOString(),
+        });
+
+      if (errorMessageError) {
+        console.error("Error saving error message:", errorMessageError);
+      }
     }
 
     return NextResponse.json({

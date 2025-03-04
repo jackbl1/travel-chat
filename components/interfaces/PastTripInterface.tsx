@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { PastTripCard } from "./PastTripCard";
+import { cn } from "@/lib/utils";
 
 export const PastTripInterface = () => {
   const activeSessionId = useSelector(getActiveSessionId);
@@ -80,19 +81,23 @@ export const PastTripInterface = () => {
         {sessions?.map((session) => (
           <li key={session.sessionId}>
             <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between bg-gray-200 p-4 rounded-lg hover:bg-gray-300 cursor-pointer transition-colors">
-                <button
-                  className="flex-1 text-left font-medium"
-                  onClick={() =>
-                    setExpandedSessionId(
-                      expandedSessionId === session.sessionId
-                        ? null
-                        : session.sessionId
-                    )
-                  }
-                >
+              <div
+                className={cn(
+                  "flex items-center justify-between bg-gray-200 p-4 rounded-lg hover:bg-gray-300 cursor-pointer transition-colors",
+                  expandedSessionId === session.sessionId &&
+                    "bg-gray-300 rounded-b-none"
+                )}
+                onClick={() =>
+                  setExpandedSessionId(
+                    expandedSessionId === session.sessionId
+                      ? null
+                      : session.sessionId
+                  )
+                }
+              >
+                <div className="flex-1 text-left font-medium">
                   {session.name}
-                </button>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     className="p-1.5 hover:bg-gray-400 rounded-full transition-colors"
