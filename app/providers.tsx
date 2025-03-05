@@ -15,7 +15,8 @@ function PostHogPageView() {
   const posthog = usePostHog();
 
   useEffect(() => {
-    if (pathname && posthog) {
+    // Only capture pageviews in production
+    if (pathname && posthog && process.env.NODE_ENV === "production") {
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + "?" + searchParams.toString();
@@ -43,14 +44,17 @@ export function Providers({ children }: { children: ReactNode }) {
     storeRef.current = makeStore();
   }
 
-  // Initialize PostHog
+  // Initialize PostHog only in production environment
   useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
-      api_host:
-        process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
-      person_profiles: "always",
-      capture_pageview: false,
-    });
+    // Check if we're in production environment
+    if (process.env.NODE_ENV === "production") {
+      posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY as string, {
+        api_host:
+          process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+        person_profiles: "always",
+        capture_pageview: false,
+      });
+    }
   }, []);
 
   return (

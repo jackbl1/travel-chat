@@ -21,6 +21,7 @@ import { setActiveSessionId } from "@/redux/sessionSlice";
 import { useSupabase } from "@/contexts/SupabaseContext";
 import { useAddSession, useGetSessions } from "@/hooks/useSessions";
 import { useAddMessage } from "@/hooks/useMessages";
+import { clearPendingQuery, savePendingQuery } from "@/lib/pendingQuery";
 
 interface Action {
   id: string;
@@ -115,6 +116,7 @@ export const NewChatInterface = () => {
   }, [debouncedQuery, isFocused]);
 
   const handleCreateSession = async (content: string) => {
+    savePendingQuery(content);
     if (!user?.id) {
       toast({
         title: "Sign in required",
@@ -124,24 +126,24 @@ export const NewChatInterface = () => {
       router.push("/sign-in");
       return;
     }
+    console.log("creating session");
+
     try {
+      console.log("creating session");
       const newSession = await addSessionMutation.mutateAsync({
         name: `Session ${(sessions?.length ?? 0) + 1}`,
         userId: user.id,
       });
 
-      if (newSession?.session_id) {
-        dispatch(setActiveSessionId(newSession.session_id));
-        await addMessageMutation.mutateAsync({
-          sessionId: newSession.session_id,
-          userId: user.id,
-          role: "user",
-          content: content,
-        });
+      console.log("created session", newSession);
+
+      if (newSession?.sessionId) {
+        dispatch(setActiveSessionId(newSession.sessionId));
         dispatch(setCurrentView(View.CurrentChat));
       }
     } catch (error) {
       console.error("Error creating session:", error);
+      clearPendingQuery();
     }
   };
 
@@ -150,7 +152,10 @@ export const NewChatInterface = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log("handleSubmit");
     e.preventDefault();
+    console.log("submitting");
+    console.log(query);
     if (query.trim()) {
       await handleCreateSession(query);
       setQuery("");
