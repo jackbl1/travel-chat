@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 //import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Providers } from "@/redux/providers";
+import { Providers } from "./providers";
 import { SupabaseProvider } from "@/contexts/SupabaseContext";
 import { ReactQueryProvider } from "@/contexts/ReactQueryContext";
 import { Toaster } from "@/components/ui/toaster";
@@ -31,11 +31,11 @@ export default function RootLayout({
       <body
       //className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ReactQueryProvider>
-          <Providers>
+        <Providers>
+          <ReactQueryProvider>
             <SupabaseProvider>{children}</SupabaseProvider>
-          </Providers>
-        </ReactQueryProvider>
+          </ReactQueryProvider>
+        </Providers>
         <Toaster />
       </body>
     </html>
