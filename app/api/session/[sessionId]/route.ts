@@ -21,10 +21,10 @@ const handleError = (error: Error) => {
 // GET handler by session id
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = (await params).slug;
+    const sessionId = (await params).sessionId;
 
     if (!sessionId) {
       return NextResponse.json(
@@ -55,10 +55,10 @@ export async function GET(
 // POST handler for adding locations to a session
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = (await params).slug;
+    const sessionId = (await params).sessionId;
     const body = await request.json();
 
     if (!sessionId) {
@@ -122,10 +122,10 @@ export async function POST(
 // PATCH handler for updating sessions
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = (await params).slug;
+    const sessionId = (await params).sessionId;
     const body = await request.json();
 
     if (!sessionId) {
@@ -172,10 +172,10 @@ export async function PATCH(
 // DELETE handler
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ sessionId: string }> }
 ) {
   try {
-    const sessionId = (await params).slug;
+    const sessionId = (await params).sessionId;
 
     if (!sessionId) {
       return NextResponse.json(

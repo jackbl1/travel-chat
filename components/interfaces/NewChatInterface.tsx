@@ -12,7 +12,9 @@ import {
   PlaneTakeoff,
   AudioLines,
 } from "lucide-react";
-import useDebounce from "../../hooks/useDebounce";
+import useDebounce from "@/hooks/useDebounce";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 import { useDispatch } from "react-redux";
 import { setCurrentView, View } from "@/redux/viewSlice";
 import { setActiveSessionId } from "@/redux/sessionSlice";
@@ -83,6 +85,9 @@ export const NewChatInterface = () => {
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const debouncedQuery = useDebounce(query, 200);
 
+  const router = useRouter();
+  const { toast } = useToast();
+
   const dispatch = useDispatch();
   const { user } = useSupabase();
   const { data: sessions } = useGetSessions(user?.id);
@@ -110,7 +115,15 @@ export const NewChatInterface = () => {
   }, [debouncedQuery, isFocused]);
 
   const handleCreateSession = async (content: string) => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to continue chatting",
+        variant: "default",
+      });
+      router.push("/sign-in");
+      return;
+    }
     try {
       const newSession = await addSessionMutation.mutateAsync({
         name: `Session ${(sessions?.length ?? 0) + 1}`,

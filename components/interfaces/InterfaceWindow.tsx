@@ -1,16 +1,33 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { NewChatInterface } from "./NewChatInterface";
 import { ChatInterface } from "./ChatInterface";
 import { MapInterface } from "./MapInterface";
 import { PastTripInterface } from "./PastTripInterface";
-import { useSelector } from "react-redux";
-import { getCurrentView, View } from "@/redux/viewSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { getCurrentView, setCurrentView, View } from "@/redux/viewSlice";
 import { ItineraryInterface } from "./ItineraryInterface";
+import { useSupabase } from "@/contexts/SupabaseContext";
+import { getPendingQuery } from "@/lib/pendingQuery";
 
 export const InterfaceWindow = () => {
+  const dispatch = useDispatch();
   const currentView = useSelector(getCurrentView);
+  const { user } = useSupabase();
+
+  // Check for pending query on auth state change
+  useEffect(() => {
+    if (user?.id) {
+      const pendingQuery = getPendingQuery();
+      if (pendingQuery) {
+        // Small delay to ensure UI is ready
+        setTimeout(() => {
+          dispatch(setCurrentView(View.CurrentChat));
+        }, 100);
+      }
+    }
+  }, [dispatch, user?.id]);
 
   const renderContent = () => {
     switch (currentView) {
