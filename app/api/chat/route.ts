@@ -20,6 +20,7 @@ import {
   MessageInterface,
   LocationInterfaceDB,
   ChatAnthropicResponse,
+  SearchResult,
 } from "@/lib/types";
 import Anthropic from "@anthropic-ai/sdk";
 import { MessageParam, TextBlock } from "@anthropic-ai/sdk/resources/index.mjs";
@@ -33,11 +34,6 @@ const supabase = createClient(
 );
 
 const googleSearch = google.customsearch("v1");
-
-type SearchResult = {
-  name: string;
-  url: string;
-};
 
 // Helper function for Google Search API calls
 async function performGoogleSearch(query: string): Promise<SearchResult[]> {

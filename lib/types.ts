@@ -106,3 +106,8 @@ export type ChatAnthropicResponse = {
   type: "message";
   usage: Usage;
 };
+
+export type SearchResult = {
+  name: string;
+  url: string;
+};
