@@ -5,13 +5,13 @@ import { getActiveSessionId } from "@/redux/sessionSlice";
 import { LocationInfo } from "./LocationInfo";
 import { useState } from "react";
 
-function LocationsList() {
+export const LocationsList = () => {
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const activeSessionId = useSelector(getActiveSessionId);
   const locations = useGetLocations(activeSessionId);
 
   return (
-    <div className="p-2 overflow-y-auto">
+    <div className="p-2">
       <div className="space-y-2">
         {locations.data?.map((location, index) => (
           <LocationInfo
@@ -30,6 +30,4 @@ function LocationsList() {
       </div>
     </div>
   );
-}
-
-export default LocationsList;
+};

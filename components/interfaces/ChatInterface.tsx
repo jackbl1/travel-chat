@@ -54,6 +54,7 @@ export const ChatInterface = () => {
     getRandomDefaultMessage()
   );
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { user } = useSupabase();
   const router = useRouter();
   const { toast } = useToast();
@@ -116,15 +117,27 @@ export const ChatInterface = () => {
     }
 
     // Scroll to the bottom when messages are loaded or updated
-    if (scrollRef.current) {
-      setTimeout(
-        () =>
-          scrollRef.current?.scrollIntoView({
-            behavior: "smooth",
-            block: "end",
-          }),
-        300
-      );
+    const scrollArea = scrollAreaRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]"
+    );
+    if (scrollArea && scrollRef.current) {
+      const isAtBottom =
+        Math.abs(
+          scrollArea.scrollHeight -
+            scrollArea.clientHeight -
+            scrollArea.scrollTop
+        ) < 1;
+
+      if (isAtBottom) {
+        setTimeout(
+          () =>
+            scrollRef.current?.scrollIntoView({
+              behavior: "smooth",
+              block: "end",
+            }),
+          300
+        );
+      }
     }
   }, [
     messagesSuccess,
@@ -259,7 +272,7 @@ export const ChatInterface = () => {
   if (messagesLoading)
     return (
       <div className="flex-1 flex flex-col h-screen relative">
-        <ScrollArea className="flex-1 p-4 overflow-y-auto">
+        <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 overflow-y-auto">
           <div className="flex gap-2 max-w-[80%]">
             <Image
               src="/icon.webp"
@@ -283,7 +296,7 @@ export const ChatInterface = () => {
 
   return (
     <div className="flex-1 flex flex-col h-screen relative">
-      <ScrollArea className="flex-1 p-4 overflow-y-auto">
+      <ScrollArea ref={scrollAreaRef} className="flex-1 p-4 overflow-y-auto">
         <div className="space-y-4" ref={scrollRef}>
           <ChatMessages
             firstMessageSent={firstMessageSent}

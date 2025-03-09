@@ -2,8 +2,8 @@
 
 import { useSelector } from "react-redux";
 import { getSessionDetailView, SessionDetailView } from "@/redux/sessionSlice";
-import LocationsList from "./LocationsList";
 import { CustomizeInterface } from "./CustomizeInterface";
+import { LocationsList } from "./LocationsList";
 
 export const SessionDetailContent = () => {
   const currentView = useSelector(getSessionDetailView);

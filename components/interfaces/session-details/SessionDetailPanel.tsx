@@ -44,7 +44,7 @@ export const SessionDetailPanel = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col overflow-y-scroll">
       <div className="h-14 border-b px-4 flex items-center">
         {isEditing ? (
           <Input
